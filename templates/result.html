@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediction Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <div class="glass-card result-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <span style="font-weight: 600;">👤 {{ user.username }}</span>
+                <a href="/logout"
+                    style="color: #fca5a5; text-decoration: none; font-size: 0.9rem; border: 1px solid rgba(239, 68, 68, 0.5); padding: 0.3rem 0.8rem; border-radius: 20px;">Logout</a>
+            </div>
+
+            <h1>Assessment Results</h1>
+
+            <div class="verdict-box {% if high_risk %}verdict-high{% else %}verdict-low{% endif %}">
+                <h2>{{ verdict }}</h2>
+                <div class="risk-score">{{ probability }}%</div>
+                <p>Estimated Probability of Diabetes Risk</p>
+
+                <div style="margin-top: 1.5rem;">
+                    {% if high_risk %}
+                    <img src="{{ url_for('static', filename='high.jpg') }}" alt="High Risk"
+                        style="max-width: 150px; border-radius: 10px;">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='low.jpg') }}" alt="Low Risk"
+                        style="max-width: 150px; border-radius: 10px;">
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if top_factors %}
+            <div
+                style="text-align: left; background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 15px; margin-bottom: 2rem;">
+                <h3 style="color: var(--primary-color); margin-top: 0;">Top Contributing Factors:</h3>
+                <ul style="list-style-type: none; padding: 0;">
+                    {% for factor in top_factors %}
+                    <li
+                        style="padding: 0.5rem 0; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center;">
+                        <span style="color: #ef4444; margin-right: 10px;">⚠</span> {{ factor }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <div class="plot-container">
+                <h3 style="color: #333; margin-bottom: 1rem;">Why this result? (SHAP Analysis)</h3>
+                <!-- SHAP Plot Image -->
+                <img src="data:image/png;base64,{{ plot_url }}" alt="SHAP Attribution Plot">
+            </div>
+
+            <!-- COUNTERFACTUALS SECTION -->
+            {% if advice_list %}
+            <div
+                style="text-align: left; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%); padding: 1.5rem; border-radius: 15px; margin-top: 2rem; border: 1px solid rgba(16, 185, 129, 0.3);">
+                <h3 style="color: #10b981; margin-top: 0;">🤖 AI Health Coach Advice</h3>
+                <p style="color: #cbd5e1; font-size: 0.9rem;">Based on simulations, here are minimal changes that could
+                    lower your risk:</p>
+                <ul style="list-style-type: none; padding: 0;">
+                    {% for tip in advice_list %}
+                    <li
+                        style="padding: 0.5rem 0; border-bottom: 1px solid rgba(16, 185, 129, 0.2); display: flex; align-items: start;">
+                        <span style="color: #10b981; margin-right: 10px;">💡</span> {{ tip }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- INTERACTION HEATMAP SECTION -->
+            {% if interaction_plot_url %}
+            <div class="plot-container" style="margin-top: 2rem;">
+                <h3 style="color: #333; margin-bottom: 1rem;">Risk Interaction Analysis</h3>
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">How different factors combine to amplify
+                    your risk (e.g. Age × BMI).</p>
+                <img src="data:image/png;base64,{{ interaction_plot_url }}" alt="Feature Interaction Heatmap">
+            </div>
+            {% endif %}
+
+            <a href="/" class="back-btn">← New Assessment</a>
+        </div>
+    </div>
+</body>
+
+</html>

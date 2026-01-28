@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Diabetes Predictor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <div class="glass-card" style="max-width: 500px; margin: 0 auto;">
+            <h1>Welcome Back</h1>
+            <p style="text-align: center; color: #cbd5e1; margin-bottom: 2rem;">Please login to access the assessment
+                tool.</p>
+
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div
+                style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; text-align: center;">
+                {{ messages[0] }}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <form action="/login" method="POST">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" required>
+                </div>
+                <button type="submit" class="submit-btn" style="margin-top: 2rem;">Login</button>
+            </form>
+
+            <p style="text-align: center; margin-top: 1.5rem;">
+                Don't have an account? <a href="/register"
+                    style="color: var(--secondary-color); text-decoration: none; font-weight: 600;">Register here</a>
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

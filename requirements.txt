@@ -1,0 +1,9 @@
+Flask
+xgboost
+shap
+matplotlib
+pandas
+numpy
+scikit-learn
+Flask-Login
+Werkzeug
