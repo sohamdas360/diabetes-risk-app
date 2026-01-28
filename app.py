@@ -293,24 +293,56 @@ def predict():
             plot_url = base64.b64encode(buf.getvalue()).decode('utf-8')
             plt.clf()
 
-            # --- INTERACTION PLOT ---
-            #try:
-                # DISABLED: SHAP interaction values are very CPU/memory intensive
-                # On free hosting tiers (Render/Heroku), this often times out or fails
-                # Keeping code commented for reference if upgrading to paid tier
-                
-                # shap_interaction_values = explainer.shap_interaction_values(df)
-                # import seaborn as sns
-                # plt.figure(figsize=(10, 8))
-                # sns.heatmap(shap_interaction_values[0], xticklabels=model_columns, yticklabels=model_columns, cmap="coolwarm", center=0)
-                # plt.title("Risk Interaction Analysis")
-                # buf_int = io.BytesIO()
-                # plt.savefig(buf_int, format='png', bbox_inches='tight')
-                # buf_int.seek(0)
-                # interaction_plot_url = base64.b64encode(buf_int.getvalue()).decode('utf-8')
-                # plt.clf()
-            #except Exception as e:
-            #    print(f"Interaction Plot Error: {e}")
+            # --- COMPLETE SHAP FEATURE BREAKDOWN ---
+            # Lightweight alternative to interaction plot
+            # Shows ALL features' contributions, color-coded by impact
+            
+            # Get all SHAP values and feature names
+            all_shap_values = shap_values[0].values
+            all_feature_names = model_columns
+            
+            # Create readable names mapping
+            readable_map = {
+                'HighBP': 'High Blood Pressure', 'HighChol': 'High Cholesterol', 
+                'Metabolic_Score': 'Metabolic Score', 'BMI': 'Body Mass Index', 
+                'GenHlth': 'General Health', 'Age': 'Age Group',
+                'DiffWalk': 'Difficulty Walking', 'PhysHlth': 'Physical Health Days', 
+                'HvyAlcoholConsump': 'Heavy Alcohol Use', 'Smoker': 'Smoking Status', 
+                'Stroke': 'Stroke History', 'HeartDiseaseorAttack': 'Heart Disease',
+                'PhysActivity': 'Physical Activity', 'MentHlth': 'Mental Health Days'
+            }
+            readable_names = [readable_map.get(f, f) for f in all_feature_names]
+            
+            # Sort by absolute value (most impactful first)
+            sorted_indices = sorted(range(len(all_shap_values)), 
+                                   key=lambda i: abs(all_shap_values[i]), 
+                                   reverse=True)
+            
+            sorted_values = [all_shap_values[i] for i in sorted_indices]
+            sorted_names = [readable_names[i] for i in sorted_indices]
+            
+            # Color code: red for increasing risk, blue for decreasing
+            colors = ['#ff4444' if val > 0 else '#4444ff' for val in sorted_values]
+            
+            # Create horizontal bar chart
+            plt.figure(figsize=(10, 8))
+            plt.barh(sorted_names, sorted_values, color=colors, edgecolor='white', linewidth=0.5)
+            plt.xlabel('Impact on Diabetes Risk', fontsize=12, fontweight='bold')
+            plt.title('Complete Risk Factor Analysis', fontsize=14, fontweight='bold', pad=20)
+            plt.axvline(x=0, color='gray', linestyle='--', linewidth=0.8)
+            
+            # Add value labels
+            for i, (name, val) in enumerate(zip(sorted_names, sorted_values)):
+                label_x = val + (0.01 if val > 0 else -0.01)
+                ha = 'left' if val > 0 else 'right'
+                plt.text(label_x, i, f'{val:.3f}', va='center', ha=ha, fontsize=9)
+            
+            plt.tight_layout()
+            buf_complete = io.BytesIO()
+            plt.savefig(buf_complete, format='png', bbox_inches='tight', dpi=100)
+            buf_complete.seek(0)
+            interaction_plot_url = base64.b64encode(buf_complete.getvalue()).decode('utf-8')
+            plt.clf()
 
             # --- COUNTERFACTUAL ADVICE ---
             if high_risk:

@@ -87,9 +87,12 @@
                 </div>
 
                 <div class="glass-card" style="padding: 1.5rem; background: rgba(0,0,0,0.2);">
-                    <h3>Risk Interaction Analysis</h3>
-                    <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:1rem;">How combined factors amplify risk
-                        (e.g. Age × BMI)</p>
+                    <h3>Complete Risk Factor Analysis</h3>
+                    <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:1rem;">All health factors sorted by impact
+                        on your diabetes risk.
+                        <span style="color:#ff4444;">■</span> Red = Increases Risk &nbsp; <span
+                            style="color:#4444ff;">■</span> Blue = Decreases Risk
+                    </p>
                     {% if interaction_plot_url %}
                     <img src="data:image/png;base64,{{ interaction_plot_url }}" alt="Interaction Heatmap"
                         style="width:100%; border-radius:10px;">
