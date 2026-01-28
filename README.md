@@ -1,4 +1,5 @@
 # Diabetes Prediction & Analysis App (XAI) 🚀
+**Live Site**: [diabetes-risk-app.onrender.com](https://diabetes-risk-app.onrender.com)
 A full-stack medical AI application that predicts diabetes risk using XGBoost and provides deep insights using Explainable AI (SHAP).
 ![App Preview](https://diabetes-risk-app.onrender.com/static/low.jpg) <!-- Example placeholder -->
 ## 🌟 Key Features
@@ -23,7 +24,8 @@ The app is optimized for **Render.com** and includes:
 ## 📖 How it Works
 The application takes 14 health indicators (BMI, BP, activity level, etc.) and processes them through an XGBoost model. 
 Individual risk is explained using **SHAP (SHapley Additive exPlanations)**, which assigns a mathematical "impact" score to each feature. This tells the user exactly *why* their score is high or low.
-## 📝 Running Locally
+## 📝 Local Development (Optional)
+If you wish to run the project on your own machine:
 1. Install requirements:
    ```bash
    pip install -r requirements.txt
@@ -32,6 +34,6 @@ Individual risk is explained using **SHAP (SHapley Additive exPlanations)**, whi
    ```bash
    python app.py
    ```
-3. Open `http://localhost:5000` in your browser.
+3. Open `http://localhost:5000` (Localhost is for development only. For live usage, use the Render link above!)
 ---
 *Created with ❤️ for health awareness.*
