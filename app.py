@@ -182,9 +182,12 @@ def dashboard():
     
     return flask.render_template('dashboard.html', user=current_user, history=history)
 
-@app.route('/predict', methods=['POST'])
+@app.route('/predict', methods=['GET', 'POST'])
 @login_required
 def predict():
+    if flask.request.method == 'GET':
+        return flask.redirect(flask.url_for('dashboard'))
+
     if not model:
         return "Model not loaded correctly. Please check server logs.", 500
 
@@ -198,14 +201,14 @@ def predict():
                           'HvyAlcoholConsump', 'DiffWalk']
         
         for feature in binary_features:
-            input_data[feature] = int(flask.request.form.get(feature, 0))
+            input_data[feature] = int(flask.request.form.get(feature) or 0)
 
         # Numeric/Category features
-        input_data['BMI'] = float(flask.request.form.get('BMI', 0))
-        input_data['GenHlth'] = int(flask.request.form.get('GenHlth', 3))
-        input_data['MentHlth'] = int(flask.request.form.get('MentHlth', 0))
-        input_data['PhysHlth'] = int(flask.request.form.get('PhysHlth', 0))
-        input_data['Age'] = int(flask.request.form.get('Age', 1))
+        input_data['BMI'] = float(flask.request.form.get('BMI') or 0)
+        input_data['GenHlth'] = int(flask.request.form.get('GenHlth') or 3)
+        input_data['MentHlth'] = int(flask.request.form.get('MentHlth') or 0)
+        input_data['PhysHlth'] = int(flask.request.form.get('PhysHlth') or 0)
+        input_data['Age'] = int(flask.request.form.get('Age') or 1)
 
         # Validation
         if input_data['BMI'] < 10 or input_data['BMI'] > 100:
@@ -219,14 +222,33 @@ def predict():
 
         # Create DataFrame in the correct order
         df = pd.DataFrame([input_data])
-        
-        # Ensure columns are in the exact order the model expects
         df = df.reindex(columns=model_columns, fill_value=0)
+        
+        # DATA FIX: Enforce float types and string columns to satisfy strict XGBoost checks
+        df = df.astype(float)
+        df.columns = df.columns.astype(str)
 
         # Make Prediction
         # Threshold 0.30 for Recall priority
         threshold = 0.30
-        probability = model.predict_proba(df)[:, 1][0]
+        
+        # ULTIMATE FIX for 'feature names' error on Render/Linux
+        # The issue: XGBoost model pickled on Windows has strict feature validation
+        # Solution: Convert to numpy array and use booster's predict with feature validation disabled
+        
+        # Convert DataFrame to numpy array (bypasses pandas metadata issues)
+        input_array = df.values
+        
+        # Get the underlying XGBoost Booster object
+        booster = model.get_booster()
+        
+        # Create DMatrix from numpy array with explicit feature names
+        # Note: feature_names must match exactly what model was trained with
+        dtest = xgboost.DMatrix(input_array, feature_names=list(df.columns))
+        
+        # Predict using the booster (returns probability for binary classification)
+        probability = booster.predict(dtest)[0]
+
         prediction = 1 if probability >= threshold else 0
         
         verdict = "High Risk of Diabetes" if prediction == 1 else "Low Risk"
