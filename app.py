@@ -12,6 +12,7 @@ import sqlite3
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from datetime import datetime
 
 # Set Matplotlib backend to Agg to allow saving images to buffer
 matplotlib.use('Agg')
@@ -150,7 +151,7 @@ def login():
         if user_data and check_password_hash(user_data[2], password):
             user = User(id=user_data[0], username=user_data[1], password_hash=user_data[2])
             login_user(user)
-            return flask.redirect(flask.url_for('index'))
+            return flask.redirect(flask.url_for('dashboard'))
         else:
             flask.flash("Invalid username or password")
             return flask.redirect(flask.url_for('login'))
@@ -164,8 +165,14 @@ def logout():
     return flask.redirect(flask.url_for('login'))
 
 @app.route('/', methods=['GET'])
-@login_required
 def index():
+    if current_user.is_authenticated:
+        return flask.redirect(flask.url_for('dashboard'))
+    return flask.render_template('index.html')
+
+@app.route('/dashboard', methods=['GET'])
+@login_required
+def dashboard():
     # Fetch History
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -173,7 +180,7 @@ def index():
     history = cursor.fetchall()
     conn.close()
     
-    return flask.render_template('index.html', user=current_user, history=history)
+    return flask.render_template('dashboard.html', user=current_user, history=history)
 
 @app.route('/predict', methods=['POST'])
 @login_required
@@ -224,7 +231,7 @@ def predict():
         
         verdict = "High Risk of Diabetes" if prediction == 1 else "Low Risk"
         high_risk = True if prediction == 1 else False
-        prob_percent = round(probability * 100, 2)
+        prob_percent = float(round(probability * 100, 2))
 
         # Generate SHAP Plot & Extract Top Factors
         plot_url = None
@@ -239,132 +246,134 @@ def predict():
             values = shap_values[0].values
             feature_names = shap_values[0].feature_names
             feature_contributions = list(zip(feature_names, values))
+            # Sort by absolute contribution strength (magnitude), but showing positive direction for risk
             positive_contributors = [(name, val) for name, val in feature_contributions if val > 0]
             positive_contributors.sort(key=lambda x: x[1], reverse=True)
-            top_factors = [name for name, val in positive_contributors[:3]]
+            
+            top_3 = positive_contributors[:3]
+            raw_top_names = [name for name, val in top_3]
+            top_factor_values = [float(val) for name, val in top_3]
             
             # Map technical names
             readable_map = {
                 'HighBP': 'High Blood Pressure', 'HighChol': 'High Cholesterol', 'Metabolic_Score': 'Metabolic Score',
                 'BMI': 'Body Mass Index', 'GenHlth': 'General Health Status', 'Age': 'Age Group',
                 'DiffWalk': 'Difficulty Walking', 'PhysHlth': 'Physical Health', 'HvyAlcoholConsump': 'Heavy Alcohol Consumption',
-                'HeartDiseaseorAttack': 'History of Heart Disease', 'MentHlth': 'Mental Health', 'PhysActivity': 'Lack of Physical Activity'
+                'Smoker': 'Smoker', 'Stroke': 'Stroke History', 'HeartDiseaseorAttack': 'Heart Disease/Attack'
             }
-            top_factors = [readable_map.get(f, f) for f in top_factors]
+            top_factor_names = [readable_map.get(f, f) for f in raw_top_names]
 
-            # SHAP Plot
-            plt.figure()
+            # Generate SHAP waterfall plot
             shap.plots.waterfall(shap_values[0], show=False, max_display=10)
             buf = io.BytesIO()
             plt.savefig(buf, format='png', bbox_inches='tight')
             buf.seek(0)
-            plot_url = base64.b64encode(buf.getvalue()).decode('utf8')
-            plt.close()
+            plot_url = base64.b64encode(buf.getvalue()).decode('utf-8')
+            plt.clf()
 
-            # --- SHAP INTERACTIONS & HEATMAP ---
+            # --- INTERACTION PLOT ---
             try:
                 # Compute interaction values
                 shap_interaction_values = explainer.shap_interaction_values(df)
-                interaction_matrix = shap_interaction_values[0] 
                 
-                # Mask diagonal
-                np.fill_diagonal(interaction_matrix, 0)
-                
-                plt.figure(figsize=(10, 8))
+                # Plot Interaction Heatmap
                 import seaborn as sns
+                plt.figure(figsize=(10, 8))
                 
-                # Create heatmap
-                ax = sns.heatmap(interaction_matrix, xticklabels=model_columns, yticklabels=model_columns, 
-                            cmap="coolwarm", center=0, annot=False)
-                plt.title("Feature Interaction Risks (Off-Diagonal)")
-                plt.tight_layout()
+                # We plot the raw interaction matrix for this single prediction
+                # shap_interaction_values shape is (1, n_features, n_features) -> take [0]
+                sns.heatmap(shap_interaction_values[0], xticklabels=model_columns, yticklabels=model_columns, cmap="coolwarm", center=0)
+                plt.title("Risk Interaction Analysis")
                 
                 buf_int = io.BytesIO()
                 plt.savefig(buf_int, format='png', bbox_inches='tight')
                 buf_int.seek(0)
-                interaction_plot_url = base64.b64encode(buf_int.getvalue()).decode('utf8')
-                plt.close()
+                interaction_plot_url = base64.b64encode(buf_int.getvalue()).decode('utf-8')
+                plt.clf()
             except Exception as e:
-                print(f"Interaction Plot Risk: {e}")
+                print(f"Interaction Plot Error: {e}")
 
-        # --- SAVE TO HISTORY (Max 5 Records) ---
-        from datetime import datetime
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
-        factors_str = ", ".join(top_factors) if top_factors else "None"
-        
+            # --- COUNTERFACTUAL ADVICE ---
+            if high_risk:
+                # Actionable features: (Feature, Change, readable message)
+                actions = [
+                    ('BMI', -2.0, "Lower BMI by 2 points"),
+                    ('BMI', -5.0, "Lower BMI by 5 points"),
+                    ('PhysActivity', 1, "Start Regular Physical Activity"),
+                    ('HvyAlcoholConsump', 0, "Stop Heavy Alcohol Consumption"),
+                    ('Smoker', 0, "Quit Smoking"), 
+                    ('GenHlth', -1, "Improve General Health by 1 level")
+                ]
+                
+                base_prob = probability
+                
+                for feature, change, message in actions:
+                    temp_data = input_data.copy()
+                    current_val = temp_data.get(feature, 0)
+                    
+                    # Logic to check if change is applicable
+                    if feature == 'PhysActivity' and current_val == 1: continue
+                    if feature == 'Smoker' and current_val == 0: continue
+                    if feature == 'HvyAlcoholConsump' and current_val == 0: continue
+                    if feature == 'GenHlth' and current_val <= 1: continue
+                    
+                    # Apply change
+                    if feature in ['BMI', 'GenHlth']:
+                        temp_data[feature] = current_val + change
+                    else:
+                        temp_data[feature] = change
+                    
+                    # Re-calculate Metabolic Score for BMI change
+                    if feature == 'BMI':
+                         bmi_s = 1 if temp_data['BMI'] > 30 else 0
+                         temp_data['Metabolic_Score'] = temp_data['HighBP'] + temp_data['HighChol'] + bmi_s
+                    
+                    # Predict
+                    t_df = pd.DataFrame([temp_data])
+                    t_df = t_df.reindex(columns=model_columns, fill_value=0)
+                    t_prob = model.predict_proba(t_df)[:, 1][0]
+                    
+                    # Check for improvement
+                    if (base_prob - t_prob) > 0.01: # Report >1% drop
+                        improvement = round((base_prob - t_prob)*100, 1)
+                        new_risk = round(t_prob*100, 1)
+                        if t_prob < threshold:
+                             advice_list.append(f"{message} (Risk drops to {new_risk}%)")
+                        elif improvement > 2.0:
+                             advice_list.append(f"{message} (Reduces risk by {improvement}%)")
+
+        # Save to History
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         
-        # Insert new record
-        # Fix: Cast numpy float to python float to avoid storing as BLOB
-        cursor.execute("INSERT INTO records (user_id, date, risk_score, verdict, top_factors) VALUES (?, ?, ?, ?, ?)", 
-                       (current_user.id, now_str, float(prob_percent), verdict, factors_str))
+        # Format top factors for display in history (string)
+        factors_str = ", ".join(top_factor_names) if 'top_factor_names' in locals() else ""
         
-        # Enforce FIFO Limit (Keep only last 5)
-        cursor.execute("SELECT id FROM records WHERE user_id = ? ORDER BY id DESC", (current_user.id,))
-        rows = cursor.fetchall()
-        if len(rows) > 5:
-            # Get IDs to delete (all except top 5)
-            ids_to_keep = [r[0] for r in rows[:5]]
-            placeholders = ','.join(['?'] * len(ids_to_keep))
-            cursor.execute(f"DELETE FROM records WHERE user_id = ? AND id NOT IN ({placeholders})", (current_user.id, *ids_to_keep))
+        # Check current count
+        cursor.execute("SELECT COUNT(*) FROM records WHERE user_id = ?", (current_user.id,))
+        count = cursor.fetchone()[0]
+        
+        if count >= 5:
+            # Delete oldest
+            cursor.execute("SELECT id FROM records WHERE user_id = ? ORDER BY id ASC LIMIT 1", (current_user.id,))
+            oldest_id = cursor.fetchone()[0]
+            cursor.execute("DELETE FROM records WHERE id = ?", (oldest_id,))
             
+        cursor.execute("INSERT INTO records (user_id, date, risk_score, verdict, top_factors) VALUES (?, ?, ?, ?, ?)",
+                       (current_user.id, datetime.now().strftime("%Y-%m-%d %H:%M"), float(prob_percent), verdict, factors_str))
         conn.commit()
         conn.close()
 
-        # --- COUNTERFACTUAL EXPLANATIONS ---
-        if high_risk:
-            # Actionable features: (Feature, Change, readable message)
-            actions = [
-                ('BMI', -2.0, "Lower BMI by 2 points"),
-                ('BMI', -5.0, "Lower BMI by 5 points"),
-                ('PhysActivity', 1, "Start Regular Physical Activity"),
-                ('HvyAlcoholConsump', 0, "Stop Heavy Alcohol Consumption"),
-                ('Smoker', 0, "Quit Smoking"), 
-                ('GenHlth', -1, "Improve General Health by 1 level")
-            ]
-            
-            base_prob = probability
-            
-            for feature, change, message in actions:
-                temp_data = input_data.copy()
-                current_val = temp_data.get(feature, 0)
-                
-                # Skip invalid actions
-                if feature == 'PhysActivity' and current_val == 1: continue
-                if feature == 'Smoker' and current_val == 0: continue
-                if feature == 'HvyAlcoholConsump' and current_val == 0: continue
-                if feature == 'GenHlth' and current_val <= 1: continue
-                
-                # Apply change
-                if feature in ['BMI', 'GenHlth']:
-                    temp_data[feature] = current_val + change
-                else:
-                    temp_data[feature] = change
-                
-                # Re-calculate Metabolic Score for BMI change
-                if feature == 'BMI':
-                     bmi_s = 1 if temp_data['BMI'] > 30 else 0
-                     temp_data['Metabolic_Score'] = temp_data['HighBP'] + temp_data['HighChol'] + bmi_s
-                
-                # Predict
-                t_df = pd.DataFrame([temp_data])
-                t_df = t_df.reindex(columns=model_columns, fill_value=0)
-                t_prob = model.predict_proba(t_df)[:, 1][0]
-                
-                # Check for improvement
-                if t_prob < threshold:
-                     advice_list.append(f"{message} (Risk drops to {round(t_prob*100, 1)}%)")
-                elif (base_prob - t_prob) > 0.05: # Report >5% drop
-                     advice_list.append(f"{message} (Reduces risk by {round((base_prob - t_prob)*100, 1)}%)")
-
         return flask.render_template('result.html', 
-                                     verdict=verdict, 
-                                     probability=prob_percent, 
+                                     prediction=prediction, 
+                                     probability=probability, 
+                                     prob_percent=prob_percent,
+                                     verdict=verdict,
                                      high_risk=high_risk,
                                      plot_url=plot_url,
                                      interaction_plot_url=interaction_plot_url,
-                                     top_factors=top_factors,
+                                     top_factors=top_factor_names,
+                                     top_factor_values=top_factor_values,
                                      advice_list=advice_list,
                                      user=current_user)
 
@@ -373,4 +382,4 @@ def predict():
         return f"An error occurred during prediction: {e}", 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True)

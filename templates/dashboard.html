@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diabetes Risk Predictor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div style="color:white; font-weight:bold;">Welcome, {{ user.username }}</div>
+            <a href="{{ url_for('logout') }}"
+                style="color:#ef4444; border:1px solid #ef4444; padding:5px 10px; border-radius:5px; text-decoration:none;">Logout</a>
+        </div>
+
+        <div class="glass-card animate__animated animate__fadeIn">
+            <h1>Diabetes Risk Assessment</h1>
+            <p style="text-align:center; color:#94a3b8; margin-bottom:2rem;">Enter your health metrics to get an instant
+                AI-powered risk analysis.</p>
+
+            <form action="{{ url_for('predict') }}" method="POST">
+                <!-- Numeric Inputs -->
+                <div class="form-group">
+                    <label for="BMI">BMI (Body Mass Index)</label>
+                    <input type="number" step="0.1" name="BMI" required placeholder="e.g. 25.5" min="10" max="100">
+                </div>
+                <div class="form-group">
+                    <label for="GenHlth">General Health (1-5)</label>
+                    <select name="GenHlth">
+                        <option value="1">Excellent</option>
+                        <option value="2">Very Good</option>
+                        <option value="3" selected>Good</option>
+                        <option value="4">Fair</option>
+                        <option value="5">Poor</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="MentHlth">Mental Health (Days/Month bad)</label>
+                    <input type="number" name="MentHlth" placeholder="0-30" min="0" max="30">
+                </div>
+                <div class="form-group">
+                    <label for="PhysHlth">Physical Health (Days/Month bad)</label>
+                    <input type="number" name="PhysHlth" placeholder="0-30" min="0" max="30">
+                </div>
+                <div class="form-group">
+                    <label for="Age">Age Group</label>
+                    <select name="Age">
+                        <option value="1">18-24</option>
+                        <option value="2">25-29</option>
+                        <option value="3">30-34</option>
+                        <option value="4">35-39</option>
+                        <option value="5">40-44</option>
+                        <option value="6">45-49</option>
+                        <option value="7">50-54</option>
+                        <option value="8">55-59</option>
+                        <option value="9">60-64</option>
+                        <option value="10">65-69</option>
+                        <option value="11">70-74</option>
+                        <option value="12">75-79</option>
+                        <option value="13">80+</option>
+                    </select>
+                </div>
+
+                <!-- Binary Inputs -->
+                <div class="form-group">
+                    <label>High Blood Pressure?</label>
+                    <select name="HighBP">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>High Cholesterol?</label>
+                    <select name="HighChol">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Smoker (at least 100 cigs)?</label>
+                    <select name="Smoker">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+                <!-- Other Binary -->
+                <div class="form-group"><label>Stroke History?</label><select name="Stroke">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select></div>
+                <div class="form-group"><label>Heart Disease/Attack?</label><select name="HeartDiseaseorAttack">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select></div>
+                <div class="form-group"><label>Physical Activity?</label><select name="PhysActivity">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select></div>
+                <div class="form-group"><label>Heavy Alcohol?</label><select name="HvyAlcoholConsump">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select></div>
+                <div class="form-group"><label>Difficulty Walking?</label><select name="DiffWalk">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select></div>
+
+                <button type="submit" class="submit-btn" style="width:100%;">Assess Risk Now</button>
+            </form>
+
+            <!-- Stats Bar -->
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <h4>537M+</h4>
+                    <p>People Affected</p>
+                </div>
+                <div class="stat-item">
+                    <h4>250K+</h4>
+                    <p>Records Analyzed</p>
+                </div>
+                <div class="stat-item">
+                    <h4>XAI</h4>
+                    <p>Explainable AI</p>
+                </div>
+            </div>
+        </div>
+
+        {% if history %}
+        <div class="glass-card animate__animated animate__fadeInUp" style="margin-top: 2rem; animation-delay: 0.2s;">
+            <h2>Recent Assessments</h2>
+            <table style="width:100%; text-align:left; border-collapse: collapse; color: #fff;">
+                <thead>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.2);">
+                        <th style="padding:10px;">Date</th>
+                        <th style="padding:10px;">Verdict</th>
+                        <th style="padding:10px;">Risk %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in history %}
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px;">{{ record[0] }}</td>
+                        <td style="padding:10px; color: {{ '#ef4444' if 'High' in record[1] else '#10b981' }}">{{
+                            record[1] }}</td>
+                        <td style="padding:10px;">{{ record[2] }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</body>
+
+</html>
