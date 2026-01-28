@@ -253,7 +253,7 @@ def predict():
         
         verdict = "High Risk of Diabetes" if prediction == 1 else "Low Risk"
         high_risk = True if prediction == 1 else False
-        prob_percent = float(round(probability * 100, 2))
+        prob_percent = round(probability * 100, 2)
 
         # Generate SHAP Plot & Extract Top Factors
         plot_url = None
