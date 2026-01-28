@@ -294,26 +294,23 @@ def predict():
             plt.clf()
 
             # --- INTERACTION PLOT ---
-            try:
-                # Compute interaction values
-                shap_interaction_values = explainer.shap_interaction_values(df)
+            #try:
+                # DISABLED: SHAP interaction values are very CPU/memory intensive
+                # On free hosting tiers (Render/Heroku), this often times out or fails
+                # Keeping code commented for reference if upgrading to paid tier
                 
-                # Plot Interaction Heatmap
-                import seaborn as sns
-                plt.figure(figsize=(10, 8))
-                
-                # We plot the raw interaction matrix for this single prediction
-                # shap_interaction_values shape is (1, n_features, n_features) -> take [0]
-                sns.heatmap(shap_interaction_values[0], xticklabels=model_columns, yticklabels=model_columns, cmap="coolwarm", center=0)
-                plt.title("Risk Interaction Analysis")
-                
-                buf_int = io.BytesIO()
-                plt.savefig(buf_int, format='png', bbox_inches='tight')
-                buf_int.seek(0)
-                interaction_plot_url = base64.b64encode(buf_int.getvalue()).decode('utf-8')
-                plt.clf()
-            except Exception as e:
-                print(f"Interaction Plot Error: {e}")
+                # shap_interaction_values = explainer.shap_interaction_values(df)
+                # import seaborn as sns
+                # plt.figure(figsize=(10, 8))
+                # sns.heatmap(shap_interaction_values[0], xticklabels=model_columns, yticklabels=model_columns, cmap="coolwarm", center=0)
+                # plt.title("Risk Interaction Analysis")
+                # buf_int = io.BytesIO()
+                # plt.savefig(buf_int, format='png', bbox_inches='tight')
+                # buf_int.seek(0)
+                # interaction_plot_url = base64.b64encode(buf_int.getvalue()).decode('utf-8')
+                # plt.clf()
+            #except Exception as e:
+            #    print(f"Interaction Plot Error: {e}")
 
             # --- COUNTERFACTUAL ADVICE ---
             if high_risk:
