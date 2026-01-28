@@ -426,6 +426,7 @@ def predict():
                                      top_factors=top_factor_names,
                                      top_factor_values=top_factor_values,
                                      advice_list=advice_list,
+                                     metabolic_score=metabolic_score,
                                      user=current_user)
 
     except Exception as e:

@@ -52,6 +52,26 @@
                         </div>
                     </div>
 
+                    <!-- Metabolic Score Display -->
+                    <div
+                        style="text-align: center; margin: 2rem 0; padding: 1.5rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15)); border-radius: 15px; border: 1px solid rgba(99, 102, 241, 0.3);">
+                        <h3 style="margin-bottom: 0.5rem; color: #a5b4fc;">Metabolic Score</h3>
+                        <div style="font-size: 3rem; font-weight: bold; color: #fff; margin: 0.5rem 0;">
+                            {{ metabolic_score }}
+                        </div>
+                        <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.5rem;">
+                            Composite health indicator (0-3 scale)<br>
+                            <span style="font-size: 0.75rem;">High BP + High Cholesterol + Obesity (BMI>30)</span>
+                        </p>
+                        <div
+                            style="margin-top: 1rem; display: flex; justify-content: center; gap: 1rem; font-size: 0.8rem;">
+                            <span style="color: #4ade80;">● 0 = Excellent</span>
+                            <span style="color: #fbbf24;">● 1-2 = Moderate</span>
+                            <span style="color: #ef4444;">● 3 = High Risk</span>
+                        </div>
+                    </div>
+
+
                     <h3>Top 3 Risk Drivers</h3>
                     <div style="height: 200px;">
                         <canvas id="riskDriversChart"></canvas>
