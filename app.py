@@ -393,12 +393,12 @@ def predict():
                     
                     # Check for improvement
                     if (base_prob - t_prob) > 0.01: # Report >1% drop
-                        improvement = round((base_prob - t_prob)*100, 1)
-                        new_risk = round(t_prob*100, 1)
+                        improvement = (base_prob - t_prob) * 100
+                        new_risk = t_prob * 100
                         if t_prob < threshold:
-                             advice_list.append(f"{message} (Risk drops to {new_risk}%)")
+                             advice_list.append(f"{message} (Risk drops to {new_risk:.2f}%)")
                         elif improvement > 2.0:
-                             advice_list.append(f"{message} (Reduces risk by {improvement}%)")
+                             advice_list.append(f"{message} (Reduces risk by {improvement:.2f}%)")
 
         # Save to History
         conn = sqlite3.connect(DB_NAME)
