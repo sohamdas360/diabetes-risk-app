@@ -198,19 +198,14 @@ def predict():
         # Binary features (0/1)
         binary_features = ['HighBP', 'HighChol', 'Smoker', 'Stroke', 
                           'HeartDiseaseorAttack', 'PhysActivity', 
-                          'HvyAlcoholConsump', 'DiffWalk', 'Fruits', 'Veggies', 'Sex']
+                          'HvyAlcoholConsump', 'DiffWalk', 'Fruits', 'Veggies']
         
         for feature in binary_features:
             input_data[feature] = int(flask.request.form.get(feature) or 0)
 
         # Numeric/Category features
         input_data['BMI'] = float(flask.request.form.get('BMI') or 0)
-        input_data['GenHlth'] = int(flask.request.form.get('GenHlth') or 3)
-        input_data['MentHlth'] = int(flask.request.form.get('MentHlth') or 0)
-        input_data['PhysHlth'] = int(flask.request.form.get('PhysHlth') or 0)
         input_data['Age'] = int(flask.request.form.get('Age') or 1)
-        input_data['Education'] = int(flask.request.form.get('Education') or 1)
-        input_data['Income'] = int(flask.request.form.get('Income') or 1)
 
         # Validation
         if input_data['BMI'] < 10 or input_data['BMI'] > 100:
@@ -226,12 +221,8 @@ def predict():
         # 3. Lifestyle_Risk: (Smoker + HvyAlcoholConsump) - (PhysActivity + Fruits + Veggies)
         input_data['Lifestyle_Risk'] = (input_data['Smoker'] + input_data['HvyAlcoholConsump']) - (input_data['PhysActivity'] + input_data['Fruits'] + input_data['Veggies'])
 
-        # 4. SES_Index: Income * Education
-        input_data['SES_Index'] = input_data['Income'] * input_data['Education']
-
-        # Keep legacy metabolic_score for compatibility if needed elsewhere, 
-        # but the model now looks for 'Metabolic_Index'
-        input_data['Metabolic_Score'] = input_data['HighBP'] + input_data['HighChol'] + (1 if input_data['BMI'] > 30 else 0)
+        # Legacy Metabolic Score for UI display
+        metabolic_score = input_data['HighBP'] + input_data['HighChol'] + (1 if input_data['BMI'] > 30 else 0)
 
         # Create DataFrame in the correct order
         df = pd.DataFrame([input_data])
@@ -242,8 +233,8 @@ def predict():
         df.columns = df.columns.astype(str)
 
         # Make Prediction
-        # Updated Threshold for 95%+ Recall (from retraining)
-        threshold = 0.21
+        # Updated Threshold for 92%+ Recall
+        threshold = 0.27
         
         # ULTIMATE FIX for 'feature names' error on Render/Linux
         # The issue: XGBoost model pickled on Windows has strict feature validation
@@ -292,11 +283,11 @@ def predict():
             # Map technical names
             readable_map = {
                 'HighBP': 'High Blood Pressure', 'HighChol': 'High Cholesterol', 'Metabolic_Score': 'Metabolic Score',
-                'BMI': 'Body Mass Index', 'GenHlth': 'General Health Status', 'Age': 'Age Group',
-                'DiffWalk': 'Difficulty Walking', 'PhysHlth': 'Physical Health', 'HvyAlcoholConsump': 'Heavy Alcohol Consumption',
+                'BMI': 'Body Mass Index', 'Age': 'Age Group',
+                'DiffWalk': 'Difficulty Walking', 'HvyAlcoholConsump': 'Heavy Alcohol Consumption',
                 'Smoker': 'Smoker Status', 'Stroke': 'Stroke History', 'HeartDiseaseorAttack': 'Heart Disease',
                 'Metabolic_Index': 'Metabolic Index', 'Physical_Fragility': 'Physical Fragility',
-                'Lifestyle_Risk': 'Lifestyle Risk', 'SES_Index': 'SES Index'
+                'Lifestyle_Risk': 'Lifestyle Risk'
             }
             top_factor_names = [readable_map.get(f, f) for f in raw_top_names]
 
@@ -320,13 +311,12 @@ def predict():
             readable_map = {
                 'HighBP': 'High Blood Pressure', 'HighChol': 'High Cholesterol', 
                 'Metabolic_Score': 'Metabolic Score', 'BMI': 'Body Mass Index', 
-                'GenHlth': 'General Health', 'Age': 'Age Group',
-                'DiffWalk': 'Difficulty Walking', 'PhysHlth': 'Physical Health Days', 
+                'Age': 'Age Group', 'DiffWalk': 'Difficulty Walking', 
                 'HvyAlcoholConsump': 'Heavy Alcohol Use', 'Smoker': 'Smoking Status', 
                 'Stroke': 'Stroke History', 'HeartDiseaseorAttack': 'Heart Disease',
-                'PhysActivity': 'Physical Activity', 'MentHlth': 'Mental Health Days',
+                'PhysActivity': 'Physical Activity', 
                 'Metabolic_Index': 'Metabolic Index (Health Indices)', 'Physical_Fragility': 'Physical Fragility Index',
-                'Lifestyle_Risk': 'Lifestyle Risk Balance', 'SES_Index': 'Socioeconomic index'
+                'Lifestyle_Risk': 'Lifestyle Risk Balance'
             }
             readable_names = [readable_map.get(f, f) for f in all_feature_names]
             
