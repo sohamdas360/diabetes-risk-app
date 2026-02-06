@@ -286,8 +286,8 @@ def predict():
                 'BMI': 'Body Mass Index', 'Age': 'Age Group',
                 'DiffWalk': 'Difficulty Walking', 'HvyAlcoholConsump': 'Heavy Alcohol Consumption',
                 'Smoker': 'Smoker Status', 'Stroke': 'Stroke History', 'HeartDiseaseorAttack': 'Heart Disease',
-                'Metabolic_Index': 'Metabolic Index', 'Physical_Fragility': 'Physical Fragility',
-                'Lifestyle_Risk': 'Lifestyle Risk'
+                'Metabolic_Index': 'Metabolic Index', 'Physical_Fragility': 'Physical Fragility Index',
+                'Lifestyle_Risk': 'Lifestyle Risk Balance'
             }
             top_factor_names = [readable_map.get(f, f) for f in raw_top_names]
 
@@ -444,4 +444,4 @@ def predict():
         return f"An error occurred during prediction: {e}", 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
