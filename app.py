@@ -206,6 +206,9 @@ def predict():
         # Numeric/Category features
         input_data['BMI'] = float(flask.request.form.get('BMI') or 0)
         input_data['Age'] = int(flask.request.form.get('Age') or 1)
+        input_data['MentHlth'] = int(flask.request.form.get('MentHlth') or 0)
+        input_data['Income'] = int(flask.request.form.get('Income') or 1)
+        input_data['AnyHealthcare'] = int(flask.request.form.get('AnyHealthcare') or 0)
 
         # Validation
         if input_data['BMI'] < 10 or input_data['BMI'] > 100:
@@ -220,6 +223,9 @@ def predict():
 
         # 3. Lifestyle_Risk: (Smoker + HvyAlcoholConsump) - (PhysActivity + Fruits + Veggies)
         input_data['Lifestyle_Risk'] = (input_data['Smoker'] + input_data['HvyAlcoholConsump']) - (input_data['PhysActivity'] + input_data['Fruits'] + input_data['Veggies'])
+        
+        # 4. Psychosocial_Stress: Mental Health + (9 - Income) + (No Healthcare * 2)
+        input_data['Psychosocial_Stress'] = input_data['MentHlth'] + (9 - input_data['Income']) + ((1 - input_data['AnyHealthcare']) * 2)
 
         # Legacy Metabolic Score for UI display
         metabolic_score = input_data['HighBP'] + input_data['HighChol'] + (1 if input_data['BMI'] > 30 else 0)
@@ -312,6 +318,12 @@ def predict():
                     'score': round(input_data['Lifestyle_Risk'], 1),
                     'formula': '(Smoking + Alcohol) - (Active + Healthy Diet)',
                     'desc': 'Balance of risk behaviors vs. protective habits.'
+                },
+                'stress': {
+                    'name': 'Psychosocial Stress',
+                    'score': round(input_data['Psychosocial_Stress'], 1),
+                    'formula': 'Mental Health + Economic Pressure + Healthcare Barrier',
+                    'desc': 'Holistic view of mental and environmental stress factors.'
                 }
             }
 
