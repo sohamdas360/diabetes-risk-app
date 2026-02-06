@@ -292,7 +292,7 @@ def predict():
             readable_map = {
                 'HighBP': 'High Blood Pressure', 'HighChol': 'High Cholesterol', 'Metabolic_Score': 'Metabolic Score',
                 'BMI': 'Body Mass Index', 'Age': 'Age Group',
-                'DiffWalk': 'Difficulty Walking', 'HvyAlcoholConsump': 'Heavy Alcohol Consumption',
+                'DiffWalk': 'Difficulty in Walking', 'HvyAlcoholConsump': 'Heavy Alcohol Consumption',
                 'Smoker': 'Smoker Status', 'Stroke': 'Stroke History', 'HeartDiseaseorAttack': 'Heart Disease',
                 'Metabolic_Index': 'Metabolic Index', 'Physical_Fragility': 'Physical Fragility Index',
                 'Lifestyle_Risk': 'Lifestyle Risk Balance'
