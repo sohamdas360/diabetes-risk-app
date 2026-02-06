@@ -52,29 +52,27 @@
                         </div>
                     </div>
 
-                    <!-- Metabolic Score Display -->
-                    <div
-                        style="text-align: center; margin: 2rem 0; padding: 1.5rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15)); border-radius: 15px; border: 1px solid rgba(99, 102, 241, 0.3);">
-                        <h3 style="margin-bottom: 0.5rem; color: #a5b4fc;">Metabolic Score</h3>
-                        <div style="font-size: 3rem; font-weight: bold; color: #fff; margin: 0.5rem 0;">
-                            {{ metabolic_score }}
-                        </div>
-                        <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.5rem;">
-                            Composite health indicator (0-3 scale)<br>
-                            <span style="font-size: 0.75rem;">High BP + High Cholesterol + Obesity (BMI>30)</span>
-                        </p>
-                        <div
-                            style="margin-top: 1rem; display: flex; justify-content: center; gap: 1rem; font-size: 0.8rem;">
-                            <span style="color: #4ade80;">● 0 = Excellent</span>
-                            <span style="color: #fbbf24;">● 1-2 = Moderate</span>
-                            <span style="color: #ef4444;">● 3 = High Risk</span>
-                        </div>
-                    </div>
+                    <!-- Advanced Health Indices (Transparency Overhaul) -->
+                    <div class="indices-container" style="margin-top: 2rem;">
+                        <h3 style="text-align: center; color: #a5b4fc; margin-bottom: 1.5rem;">Advanced Health Profiling
+                        </h3>
 
-
-                    <h3>Top 3 Risk Drivers</h3>
-                    <div style="height: 200px;">
-                        <canvas id="riskDriversChart"></canvas>
+                        {% for key, index in health_indices.items() %}
+                        <div class="glass-card index-card"
+                            style="margin-bottom: 1rem; padding: 1.2rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <span style="font-weight: bold; color: #fff; font-size: 1.1rem;">{{ index.name }}</span>
+                                <span style="font-size: 1.4rem; font-weight: 800; color: #6366f1;">{{ index.score
+                                    }}</span>
+                            </div>
+                            <div
+                                style="font-family: monospace; font-size: 0.85rem; color: #6ee7b7; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 5px; margin-bottom: 0.5rem;">
+                                <strong>Logic:</strong> {{ index.formula }}
+                            </div>
+                            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">{{ index.desc }}</p>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
 
@@ -94,31 +92,35 @@
                 </div>
             </div>
 
-            <!-- Advanced Analytics -->
-            <div class="result-grid">
-                <div class="glass-card" style="padding: 1.5rem; background: rgba(0,0,0,0.2);">
-                    <h3>Detailed SHAP Logic</h3>
-                    {% if plot_url %}
-                    <img src="data:image/png;base64,{{ plot_url }}" alt="SHAP Plot"
-                        style="width:100%; border-radius:10px;">
-                    {% else %}
-                    <p>Plot not available.</p>
-                    {% endif %}
-                </div>
+            <!-- Simplified Factor Breakdown -->
+            <div class="glass-card" style="margin-top: 2rem; background: rgba(0,0,0,0.3);">
+                <h3>Impact Analysis</h3>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 1.5rem;">
+                    We compare your metrics against a national average baseline. Red factors increase your individual
+                    risk.
+                </p>
 
-                <div class="glass-card" style="padding: 1.5rem; background: rgba(0,0,0,0.2);">
-                    <h3>Complete Risk Factor Analysis</h3>
-                    <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:1rem;">All health factors sorted by impact
-                        on your diabetes risk.
-                        <span style="color:#ff4444;">■</span> Red = Increases Risk &nbsp; <span
-                            style="color:#4444ff;">■</span> Blue = Decreases Risk
-                    </p>
-                    {% if interaction_plot_url %}
-                    <img src="data:image/png;base64,{{ interaction_plot_url }}" alt="Interaction Heatmap"
-                        style="width:100%; border-radius:10px;">
-                    {% else %}
-                    <p>Interaction data not available.</p>
-                    {% endif %}
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div>
+                        <h4
+                            style="color: #ef4444; border-bottom: 1px solid rgba(239, 68, 68, 0.3); padding-bottom: 0.5rem;">
+                            Increased Risk</h4>
+                        <ul style="list-style: none; padding: 0; margin-top: 0.8rem;">
+                            {% for factor in top_factors %}
+                            <li style="margin-bottom: 0.6rem; color: #fecaca; font-size: 0.9rem;">
+                                <span style="color: #ef4444;">↑</span> {{ factor }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div>
+                        <h4
+                            style="color: #4ade80; border-bottom: 1px solid rgba(74, 222, 128, 0.3); padding-bottom: 0.5rem;">
+                            Protective Factors</h4>
+                        <p style="font-size: 0.75rem; color: #94a3b8; font-style: italic;">
+                            Factors like Healthy Diet and Physical Activity help pull your risk score down.
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -173,46 +175,6 @@
                 }
             }
         });
-
-        // --- 2. Risk Drivers Bar Chart ---
-        // Parse the JSON data safely
-        const factorNames = {{ top_factors| tojson }};
-        const factorValues = {{ top_factor_values| tojson }};
-
-        const ctxBar = document.getElementById('riskDriversChart').getContext('2d');
-        const barChart = new Chart(ctxBar, {
-            type: 'bar',
-            data: {
-                labels: factorNames,
-                datasets: [{
-                    label: 'Impact',
-                    data: factorValues,
-                    backgroundColor: 'rgba(0, 242, 254, 0.6)',
-                    borderColor: '#00f2fe',
-                    borderWidth: 1,
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                indexAxis: 'y', // Horizontal bars
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                        ticks: { color: '#94a3b8', font: { size: 10 } }
-                    },
-                    y: {
-                        grid: { display: false },
-                        ticks: { color: '#fff', font: { size: 10 } }
-                    }
-                },
-                plugins: {
-                    legend: { display: false }
-                }
-            }
-        });
-
     </script>
 </body>
 

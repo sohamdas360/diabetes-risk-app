@@ -276,6 +276,8 @@ def predict():
             positive_contributors = [(name, val) for name, val in feature_contributions if val > 0]
             positive_contributors.sort(key=lambda x: x[1], reverse=True)
             
+            # --- TOP FACTORS (Simplified) ---
+            # We still use SHAP to identify what matters most, but we won't show the confusing charts.
             top_3 = positive_contributors[:3]
             raw_top_names = [name for name, val in top_3]
             top_factor_values = [float(val) for name, val in top_3]
@@ -291,65 +293,31 @@ def predict():
             }
             top_factor_names = [readable_map.get(f, f) for f in raw_top_names]
 
-            # Generate SHAP waterfall plot
-            shap.plots.waterfall(shap_values[0], show=False, max_display=10)
-            buf = io.BytesIO()
-            plt.savefig(buf, format='png', bbox_inches='tight')
-            buf.seek(0)
-            plot_url = base64.b64encode(buf.getvalue()).decode('utf-8')
-            plt.clf()
-
-            # --- COMPLETE SHAP FEATURE BREAKDOWN ---
-            # Lightweight alternative to interaction plot
-            # Shows ALL features' contributions, color-coded by impact
-            
-            # Get all SHAP values and feature names
-            all_shap_values = shap_values[0].values
-            all_feature_names = model_columns
-            
-            # Create readable names mapping
-            readable_map = {
-                'HighBP': 'High Blood Pressure', 'HighChol': 'High Cholesterol', 
-                'Metabolic_Score': 'Metabolic Score', 'BMI': 'Body Mass Index', 
-                'Age': 'Age Group', 'DiffWalk': 'Difficulty Walking', 
-                'HvyAlcoholConsump': 'Heavy Alcohol Use', 'Smoker': 'Smoking Status', 
-                'Stroke': 'Stroke History', 'HeartDiseaseorAttack': 'Heart Disease',
-                'PhysActivity': 'Physical Activity', 
-                'Metabolic_Index': 'Metabolic Index (Health Indices)', 'Physical_Fragility': 'Physical Fragility Index',
-                'Lifestyle_Risk': 'Lifestyle Risk Balance'
+            # PREPARING HEALTH INDICES FOR UI (Transparency)
+            health_indices = {
+                'metabolic': {
+                    'name': 'Metabolic Index',
+                    'score': round(input_data['Metabolic_Index'], 1),
+                    'formula': '(High BP + High Chol) × BMI',
+                    'desc': 'Measures combined stress from blood metrics and weight.'
+                },
+                'fragility': {
+                    'name': 'Physical Fragility',
+                    'score': round(input_data['Physical_Fragility'], 1),
+                    'formula': 'Age × (Physical Limits + History + 1)',
+                    'desc': 'Captures how age and physical history increase vulnerability.'
+                },
+                'lifestyle': {
+                    'name': 'Lifestyle Risk',
+                    'score': round(input_data['Lifestyle_Risk'], 1),
+                    'formula': '(Smoking + Alcohol) - (Active + Healthy Diet)',
+                    'desc': 'Balance of risk behaviors vs. protective habits.'
+                }
             }
-            readable_names = [readable_map.get(f, f) for f in all_feature_names]
-            
-            # Sort by absolute value (most impactful first)
-            sorted_indices = sorted(range(len(all_shap_values)), 
-                                   key=lambda i: abs(all_shap_values[i]), 
-                                   reverse=True)
-            
-            sorted_values = [all_shap_values[i] for i in sorted_indices]
-            sorted_names = [readable_names[i] for i in sorted_indices]
-            
-            # Color code: red for increasing risk, blue for decreasing
-            colors = ['#ff4444' if val > 0 else '#4444ff' for val in sorted_values]
-            
-            # Create horizontal bar chart
-            plt.figure(figsize=(10, 8))
-            plt.barh(sorted_names, sorted_values, color=colors, edgecolor='white', linewidth=0.5)
-            plt.xlabel('Impact on Diabetes Risk', fontsize=12, fontweight='bold')
-            plt.title('Complete Risk Factor Analysis', fontsize=14, fontweight='bold', pad=20)
-            plt.axvline(x=0, color='gray', linestyle='--', linewidth=0.8)
-            
-            # Add value labels
-            for i, (name, val) in enumerate(zip(sorted_names, sorted_values)):
-                label_x = val + (0.01 if val > 0 else -0.01)
-                ha = 'left' if val > 0 else 'right'
-                plt.text(label_x, i, f'{val:.3f}', va='center', ha=ha, fontsize=9)
-            
-            plt.tight_layout()
-            buf_complete = io.BytesIO()
-            plt.savefig(buf_complete, format='png', bbox_inches='tight', dpi=100)
-            buf_complete.seek(0)
-            interaction_plot_url = base64.b64encode(buf_complete.getvalue()).decode('utf-8')
-            plt.clf()
+
+            # Complex charts removed as they were confusing to users
+            plot_url = None
+            interaction_plot_url = None
 
             # --- PROACTIVE HEALTH ADVICE ---
             # Now provides advice to EVERYONE with modifiable risk factors
@@ -437,6 +405,7 @@ def predict():
                                      top_factor_values=top_factor_values,
                                      advice_list=advice_list,
                                      metabolic_score=metabolic_score,
+                                     health_indices=health_indices,
                                      user=current_user)
 
     except Exception as e:
