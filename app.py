@@ -351,54 +351,57 @@ def predict():
             interaction_plot_url = base64.b64encode(buf_complete.getvalue()).decode('utf-8')
             plt.clf()
 
-            # --- COUNTERFACTUAL ADVICE ---
-            if high_risk:
-                # Actionable features: (Feature, Change, readable message)
-                actions = [
-                    ('BMI', -2.0, "Lower BMI by 2 points"),
-                    ('BMI', -5.0, "Lower BMI by 5 points"),
-                    ('PhysActivity', 1, "Start Regular Physical Activity"),
-                    ('HvyAlcoholConsump', 0, "Stop Heavy Alcohol Consumption"),
-                    ('Smoker', 0, "Quit Smoking"), 
-                    ('GenHlth', -1, "Improve General Health by 1 level")
-                ]
+            # --- PROACTIVE HEALTH ADVICE ---
+            # Now provides advice to EVERYONE with modifiable risk factors
+            # (regardless of if they are currently High Risk or Low Risk)
+            
+            # Actionable features: (Feature, Change, readable message)
+            actions = [
+                ('HighBP', 0, "Lower/Manage High Blood Pressure"),
+                ('BMI', -2.0, "Lower BMI by 2 points"),
+                ('BMI', -5.0, "Lower BMI by 5 points"),
+                ('PhysActivity', 1, "Start Regular Physical Activity"),
+                ('HvyAlcoholConsump', 0, "Stop Heavy Alcohol Consumption"),
+                ('Smoker', 0, "Quit Smoking")
+            ]
                 
-                base_prob = probability
+            base_prob = probability
+            
+            for feature, change, message in actions:
+                temp_data = input_data.copy()
+                current_val = temp_data.get(feature, 0)
                 
-                for feature, change, message in actions:
-                    temp_data = input_data.copy()
-                    current_val = temp_data.get(feature, 0)
-                    
-                    # Logic to check if change is applicable
-                    if feature == 'PhysActivity' and current_val == 1: continue
-                    if feature == 'Smoker' and current_val == 0: continue
-                    if feature == 'HvyAlcoholConsump' and current_val == 0: continue
-                    if feature == 'GenHlth' and current_val <= 1: continue
-                    
-                    # Apply change
-                    if feature in ['BMI', 'GenHlth']:
-                        temp_data[feature] = current_val + change
+                # Logic to check if change is applicable
+                if feature == 'HighBP' and current_val == 0: continue
+                if feature == 'PhysActivity' and current_val == 1: continue
+                if feature == 'Smoker' and current_val == 0: continue
+                if feature == 'HvyAlcoholConsump' and current_val == 0: continue
+                
+                # Apply change
+                if feature in ['BMI']:
+                    temp_data[feature] = current_val + change
+                else:
+                    temp_data[feature] = change
+                
+                # Re-calculate Metabolic Score for BMI change
+                if feature == 'BMI':
+                     bmi_s = 1 if temp_data['BMI'] > 30 else 0
+                     temp_data['Metabolic_Score'] = temp_data['HighBP'] + temp_data['HighChol'] + bmi_s
+                
+                # Predict
+                t_df = pd.DataFrame([temp_data])
+                t_df = t_df.reindex(columns=model_columns, fill_value=0)
+                t_prob = model.predict_proba(t_df)[:, 1][0]
+                
+                # Check for improvement
+                # If they have the risk factor, we show the advice if it drops risk > 0.5%
+                if (base_prob - t_prob) > 0.005: 
+                    improvement = (base_prob - t_prob) * 100
+                    new_risk = t_prob * 100
+                    if t_prob < threshold and high_risk:
+                         advice_list.append(f"{message} (Risk drops to {new_risk:.2f}% - LOW RISK)")
                     else:
-                        temp_data[feature] = change
-                    
-                    # Re-calculate Metabolic Score for BMI change
-                    if feature == 'BMI':
-                         bmi_s = 1 if temp_data['BMI'] > 30 else 0
-                         temp_data['Metabolic_Score'] = temp_data['HighBP'] + temp_data['HighChol'] + bmi_s
-                    
-                    # Predict
-                    t_df = pd.DataFrame([temp_data])
-                    t_df = t_df.reindex(columns=model_columns, fill_value=0)
-                    t_prob = model.predict_proba(t_df)[:, 1][0]
-                    
-                    # Check for improvement
-                    if (base_prob - t_prob) > 0.01: # Report >1% drop
-                        improvement = (base_prob - t_prob) * 100
-                        new_risk = t_prob * 100
-                        if t_prob < threshold:
-                             advice_list.append(f"{message} (Risk drops to {new_risk:.2f}%)")
-                        elif improvement > 2.0:
-                             advice_list.append(f"{message} (Reduces risk by {improvement:.2f}%)")
+                         advice_list.append(f"{message} (Reduces risk by {improvement:.2f}%)")
 
         # Save to History
         conn = sqlite3.connect(DB_NAME)
