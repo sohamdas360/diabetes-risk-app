@@ -221,11 +221,14 @@ def predict():
         # 2. Physical_Fragility: Age * (DiffWalk + Stroke + HeartDiseaseorAttack + 1)
         input_data['Physical_Fragility'] = input_data['Age'] * (input_data['DiffWalk'] + input_data['Stroke'] + input_data['HeartDiseaseorAttack'] + 1)
 
-        # 3. Lifestyle_Risk: (Smoker + HvyAlcoholConsump) - (PhysActivity + Fruits + Veggies)
-        input_data['Lifestyle_Risk'] = (input_data['Smoker'] + input_data['HvyAlcoholConsump']) - (input_data['PhysActivity'] + input_data['Fruits'] + input_data['Veggies'])
+        # 3. Lifestyle Penalty: High Smoking/Alcohol/Inactivity = High Score
+        input_data['Lifestyle_Penalty'] = (2 * input_data['Smoker']) + (2 * input_data['HvyAlcoholConsump']) + (1 - input_data['PhysActivity']) + (1 - input_data['Fruits']) + (1 - input_data['Veggies'])
         
         # 4. Psychosocial_Stress: Mental Health + (9 - Income) + (No Healthcare * 2)
         input_data['Psychosocial_Stress'] = input_data['MentHlth'] + (9 - input_data['Income']) + ((1 - input_data['AnyHealthcare']) * 2)
+
+        # 5. Synergistic Habit Risk: Habits + Age/BMI multiplier
+        input_data['Synergistic_Habit_Risk'] = (input_data['Smoker'] + input_data['HvyAlcoholConsump']) * (input_data['BMI'] / 10 + input_data['Age'] / 5 + 1)
 
         # Legacy Metabolic Score for UI display
         metabolic_score = input_data['HighBP'] + input_data['HighChol'] + (1 if input_data['BMI'] > 30 else 0)
@@ -292,10 +295,9 @@ def predict():
             readable_map = {
                 'HighBP': 'High Blood Pressure', 'HighChol': 'High Cholesterol', 'Metabolic_Score': 'Metabolic Score',
                 'BMI': 'Body Mass Index', 'Age': 'Age Group',
-                'DiffWalk': 'Difficulty in Walking', 'HvyAlcoholConsump': 'Heavy Alcohol Consumption',
-                'Smoker': 'Smoker Status', 'Stroke': 'Stroke History', 'HeartDiseaseorAttack': 'Heart Disease',
                 'Metabolic_Index': 'Metabolic Index', 'Physical_Fragility': 'Physical Fragility Index',
-                'Lifestyle_Risk': 'Lifestyle Risk Balance'
+                'Lifestyle_Penalty': 'Lifestyle Hazard Score', 'Psychosocial_Stress': 'Stress Index',
+                'Synergistic_Habit_Risk': 'Habit Synergy Risk'
             }
             top_factor_names = [readable_map.get(f, f) for f in raw_top_names]
 
@@ -314,10 +316,10 @@ def predict():
                     'desc': 'Captures how age and physical history increase vulnerability.'
                 },
                 'lifestyle': {
-                    'name': 'Lifestyle Risk',
-                    'score': round(input_data['Lifestyle_Risk'], 1),
-                    'formula': '(Smoking + Alcohol) - (Active + Healthy Diet)',
-                    'desc': 'Balance of risk behaviors vs. protective habits.'
+                    'name': 'Lifestyle Hazard',
+                    'score': round(input_data['Lifestyle_Penalty'], 1),
+                    'formula': '(2×Habits) + Inactivity + Low Nutrition',
+                    'desc': 'Measures the penalty for unhealthy behaviors.'
                 },
                 'stress': {
                     'name': 'Psychosocial Stress',
