@@ -33,7 +33,8 @@
                         <canvas id="riskGauge"></canvas>
                         <div
                             style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
-                            <span style="font-size: 1.5rem; font-weight: bold; color:white;">{{ prob_percent }}%</span>
+                            <span style="font-size: 1.5rem; font-weight: bold; color:white;">{{
+                                "%.2f"|format(prob_percent) }}%</span>
                             <br>
                             <span style="font-size: 0.8rem; color:#94a3b8;">Probability</span>
                         </div>

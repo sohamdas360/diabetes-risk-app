@@ -172,7 +172,7 @@
                         <td style="padding:10px;">{{ record[0] }}</td>
                         <td style="padding:10px; color: {{ '#ef4444' if 'High' in record[1] else '#10b981' }}">{{
                             record[1] }}</td>
-                        <td style="padding:10px;">{{ record[2] }}%</td>
+                        <td style="padding:10px;">{{ "%.2f"|format(record[2]) }}%</td>
                     </tr>
                     {% endfor %}
                 </tbody>
