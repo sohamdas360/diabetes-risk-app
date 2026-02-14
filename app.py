@@ -206,7 +206,13 @@ def predict():
         # Numeric/Category features
         input_data['BMI'] = float(flask.request.form.get('BMI') or 0)
         input_data['Age'] = int(flask.request.form.get('Age') or 1)
-        input_data['MentHlth'] = int(flask.request.form.get('MentHlth') or 0)
+        
+        # Mapping 1-5 Scale back to raw Days for the model
+        # 5: Excellent(0), 4: Good(2), 3: Neutral(7), 2: Poor(15), 1: Very Poor(30)
+        ment_scale = int(flask.request.form.get('MentHlthScale') or 5)
+        scale_to_days = {5: 0, 4: 2, 3: 7, 2: 15, 1: 30}
+        input_data['MentHlth'] = scale_to_days.get(ment_scale, 0)
+        
         input_data['Income'] = int(flask.request.form.get('Income') or 1)
         input_data['AnyHealthcare'] = int(flask.request.form.get('AnyHealthcare') or 0)
 

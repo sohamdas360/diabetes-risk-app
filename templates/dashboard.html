@@ -111,8 +111,14 @@
 
                 <!-- Psychosocial Features -->
                 <div class="form-group">
-                    <label>Days of Poor Mental Health (Last 30 Days)</label>
-                    <input type="number" name="MentHlth" value="0" min="0" max="30" required>
+                    <label>How has your Mental Health been lately?</label>
+                    <select name="MentHlthScale">
+                        <option value="5">Excellent</option>
+                        <option value="4">Good</option>
+                        <option value="3">Neutral / Average</option>
+                        <option value="2">Poor</option>
+                        <option value="1">Very Poor</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>Annual Income Level (INR)</label>
