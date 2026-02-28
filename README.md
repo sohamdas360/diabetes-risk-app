@@ -1,45 +1,63 @@
-# Diabetes Prediction & Analysis App (XAI) 🚀
+# Diabetes Risk Analysis App (Explainable AI) 🚀
 
 **Live Site**: [diabetes-risk-app.onrender.com](https://diabetes-risk-app.onrender.com)
 
-A full-stack medical AI application that predicts diabetes risk using XGBoost and provides deep insights using Explainable AI (SHAP).
+A full-stack medical AI application that predicts diabetes risk using XGBoost and provides deep insights using **Explainable AI (XAI)**. This project focuses on "Holistic Health" by analyzing metabolic, lifestyle, and psychosocial factors.
 
-![App Preview](https://diabetes-risk-app.onrender.com/static/low.jpg) <!-- Example placeholder -->
+## 📊 System Architecture & Flow
+The system uses a unique "Transparency Layer" to bridge raw AI data with clinical logic.
+
+```mermaid
+graph TD
+    A[User Input] --> B{UX Layer}
+    B -->|Categorical Mapping| C[Mental Health Scale 1-5]
+    B -->|Economic Mapping| D[Income Level INR]
+    C & D --> E[Backend Logic]
+    
+    subgraph "Feature Engineering (The Transparency Layer)"
+    E --> F[Metabolic Index]
+    E --> G[Physical Fragility]
+    E --> H[Lifestyle Hazard]
+    E --> I[Psychosocial Stress]
+    end
+    
+    F & G & H & I --> J[XGBoost Classifier]
+    J -->|Monotonic Constraints| K[Risk Probability %]
+    K --> L[SHAP Explainer]
+    L --> M[Result Dashboard]
+    M --> N[Personalized Advice]
+```
 
 ## 🌟 Key Features
 
-*   **Premium Glassmorphism UI**: Modern, sleek interface with interactive elements.
+*   **Holistic Health Indices**:
+    *   **Metabolic Index**: Captures synergy between BP, Cholesterol, and BMI.
+    *   **Physical Fragility**: Models vulnerability based on age and physical history.
+    *   **Lifestyle Hazard**: A punitive scoring system for smoking, alcohol, and inactivity.
+    *   **Psychosocial Stress**: First-of-its-kind index combining mental health with economic stability.
 *   **Explainable AI (XAI)**:
-    *   **Waterfall Plots**: Instant visualization of the top 3 risk drivers.
-    *   **Complete Risk Breakdown**: Full Bar Chart analysis of all 14 clinical features.
-*   **AI Health Coach**: Dynamic counterfactual advice to help users lower their risk.
-*   **Metabolic Score**: A custom composite indicator for rapid health assessment.
-*   **User History**: Secure historical tracking of assessments.
-*   **Mobile Responsive**: Optimized for all devices.
+    *   **Gauge Visualization**: Instant percentage-based risk level.
+    *   **Transparency Cards**: Personal breakdown of scores for each health index.
+*   **Clinical Safety**: Uses **Monotonic Constraints** to ensure medical common sense (e.g., healthy habits *never* increase risk).
+
+## 📈 Performance Results
+
+The model was trained on **250,000+ records** from the CDC's BRFSS dataset.
+
+| Metric | Score | Importance |
+| :--- | :--- | :--- |
+| **Recall (Sensitivity)** | **92.3%** | Prioritizes safety by catching 92% of cases. |
+| **ROC-AUC** | **0.824** | High reliability in distinguishing risk levels. |
+| **Threshold** | **0.27** | Custom-tuned for clinical prevention. |
 
 ## 🛠️ Tech Stack
 
 *   **Frontend**: HTML5, Vanilla CSS (Glassmorphism), Chart.js
-*   **Backend**: Python, Flask
+*   **Backend**: Python, Flask, Gunicorn
 *   **Intelligence**: XGBoost, SHAP (Explainable AI)
-*   **Database**: SQLite
+*   **Data Source**: CDC BRFSS (Behavioral Risk Factor Surveillance System)
 
-## 🚀 Deployment
-
-The app is optimized for **Render.com** and includes:
-- `Procfile` for Gunicorn deployment.
-- `requirements.txt` with pinned versions for environment stability.
-- Robust cross-platform model loading (Windows to Linux fix).
-
-## 📖 How it Works
-
-The application takes 14 health indicators (BMI, BP, activity level, etc.) and processes them through an XGBoost model. 
-
-Individual risk is explained using **SHAP (SHapley Additive exPlanations)**, which assigns a mathematical "impact" score to each feature. This tells the user exactly *why* their score is high or low.
-
-## 📝 Local Development (Optional)
-
-If you wish to run the project on your own machine:
+## 📝 Local Development
 
 1. Install requirements:
    ```bash
@@ -49,7 +67,6 @@ If you wish to run the project on your own machine:
    ```bash
    python app.py
    ```
-3. Open `http://localhost:5000` (Localhost is for development only. For live usage, use the Render link above!)
 
 ---
-*Created with ❤️ for health awareness.*
+*Created with ❤️ for health awareness and AI transparency.*
