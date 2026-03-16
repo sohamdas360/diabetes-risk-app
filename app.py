@@ -77,19 +77,22 @@ def load_user(user_id):
         return User(id=user_data[0], username=user_data[1], password_hash=user_data[2])
     return None
 
-# Load Model and Columns
-try:
-    with open('final_diabetes_model.pkl', 'rb') as f:
-        model = pickle.load(f)
-    with open('model_columns.pkl', 'rb') as f:
-        model_columns = pickle.load(f)
-    print("Model and columns loaded successfully.")
-except Exception as e:
-    print(f"Error loading model files: {e}")
-    model = None
-    model_columns = []
+# Load New HbA1c-Augmented Model Bundle
+model = None
+model_columns = []
+threshold = 0.44
 
-# Initialize SHAP Explainer (TreeExplainer for XGBoost)
+try:
+    with open('best_model_augmented.pkl', 'rb') as f:
+        bundle = pickle.load(f)
+    model = bundle['model']
+    threshold = bundle['threshold']
+    model_columns = bundle['features']
+    print(f"HbA1c Model loaded. Threshold={threshold}, Features={len(model_columns)}")
+except Exception as e:
+    print(f"Error loading model: {e}")
+
+# Initialize SHAP Explainer
 explainer = None
 if model:
     try:
@@ -192,80 +195,82 @@ def predict():
         return "Model not loaded correctly. Please check server logs.", 500
 
     try:
-        # Extract features from form
+        # ── 1. RAW USER INPUTS ──────────────────────────────────────────
         input_data = {}
-        
+
         # Binary features (0/1)
-        binary_features = ['HighBP', 'HighChol', 'Smoker', 'Stroke', 
-                          'HeartDiseaseorAttack', 'PhysActivity', 
-                          'HvyAlcoholConsump', 'DiffWalk', 'Fruits', 'Veggies']
-        
+        binary_features = ['HighBP', 'HighChol', 'CholCheck', 'Smoker', 'Stroke',
+                           'HeartDiseaseorAttack', 'PhysActivity',
+                           'HvyAlcoholConsump', 'AnyHealthcare', 'NoDocbcCost',
+                           'DiffWalk', 'Fruits', 'Veggies']
         for feature in binary_features:
             input_data[feature] = int(flask.request.form.get(feature) or 0)
 
-        # Numeric/Category features
-        input_data['BMI'] = float(flask.request.form.get('BMI') or 0)
-        input_data['Age'] = int(flask.request.form.get('Age') or 1)
-        
-        # Mapping 1-5 Scale back to raw Days for the model
-        # 5: Excellent(0), 4: Good(2), 3: Neutral(7), 2: Poor(15), 1: Very Poor(30)
+        # Numeric / Categorical
+        input_data['BMI']       = float(flask.request.form.get('BMI') or 22)
+        input_data['Age']       = int(flask.request.form.get('Age') or 1)
+        input_data['Sex']       = int(flask.request.form.get('Sex') or 0)
+        input_data['Education'] = int(flask.request.form.get('Education') or 4)
+        input_data['Income']    = int(flask.request.form.get('Income') or 5)
+        input_data['GenHlth']   = int(flask.request.form.get('GenHlth') or 3)
+        input_data['HbA1c']     = float(flask.request.form.get('HbA1c') or 5.5)
+
+        # MentHlth: 1-5 scale → representative days
         ment_scale = int(flask.request.form.get('MentHlthScale') or 5)
         scale_to_days = {5: 0, 4: 2, 3: 7, 2: 15, 1: 30}
         input_data['MentHlth'] = scale_to_days.get(ment_scale, 0)
-        
-        input_data['Income'] = int(flask.request.form.get('Income') or 1)
-        input_data['AnyHealthcare'] = int(flask.request.form.get('AnyHealthcare') or 0)
+
+        # PhysHlth: 1-5 scale → representative days
+        phys_scale = int(flask.request.form.get('PhysHlthScale') or 5)
+        input_data['PhysHlth'] = scale_to_days.get(phys_scale, 0)
 
         # Validation
         if input_data['BMI'] < 10 or input_data['BMI'] > 100:
-             return "Invalid BMI: Please enter a value between 10 and 100.", 400
+            return "Invalid BMI: Please enter a value between 10 and 100.", 400
+        if not (4.0 <= input_data['HbA1c'] <= 14.0):
+            return "Invalid HbA1c: Please enter a value between 4.0 and 14.0.", 400
 
-        # --- NEW FEATURE MERGING (indices) ---
-        # 1. Metabolic_Index: (HighBP + HighChol) * BMI
-        input_data['Metabolic_Index'] = (input_data['HighBP'] + input_data['HighChol']) * input_data['BMI']
+        # ── 2. FEATURE ENGINEERING (matches train_augmented.py exactly) ──
+        hba1c = input_data['HbA1c']
+        input_data['HbA1c_diabetic']    = 1 if hba1c >= 6.5 else 0
+        input_data['HbA1c_prediabetic'] = 1 if 5.7 <= hba1c < 6.5 else 0
+        input_data['HbA1c_sq']          = hba1c ** 2
+        input_data['HbA1c_BMI']         = hba1c * input_data['BMI']
+        input_data['HbA1c_Age']         = hba1c * input_data['Age']
+        input_data['HbA1c_HighBP']      = hba1c * input_data['HighBP']
+        input_data['RiskScore']         = (input_data['HighBP'] + input_data['HighChol'] +
+                                           input_data['HeartDiseaseorAttack'] + input_data['Stroke'] +
+                                           input_data['DiffWalk'] + (1 if input_data['GenHlth'] >= 4 else 0))
+        input_data['BMI_obese']         = 1 if input_data['BMI'] >= 30 else 0
+        input_data['BMI_sq']            = input_data['BMI'] ** 2
+        input_data['Age_BMI']           = input_data['Age'] * input_data['BMI']
+        input_data['Age_GenHlth']       = input_data['Age'] * input_data['GenHlth']
+        input_data['Combo_BP_Chol']     = input_data['HighBP'] * input_data['HighChol']
+        input_data['HeartStroke']       = input_data['HeartDiseaseorAttack'] * input_data['Stroke']
 
-        # 2. Physical_Fragility: Age * (DiffWalk + Stroke + HeartDiseaseorAttack + 1)
-        input_data['Physical_Fragility'] = input_data['Age'] * (input_data['DiffWalk'] + input_data['Stroke'] + input_data['HeartDiseaseorAttack'] + 1)
+        # Determine HbA1c status label for UI
+        if hba1c >= 6.5:
+            hba1c_status = ('Diabetic Range', '#ef4444')
+        elif hba1c >= 5.7:
+            hba1c_status = ('Pre-diabetic Range', '#f59e0b')
+        else:
+            hba1c_status = ('Normal Range', '#10b981')
 
-        # 3. Lifestyle Penalty: High Smoking/Alcohol/Inactivity = High Score
-        input_data['Lifestyle_Penalty'] = (2 * input_data['Smoker']) + (2 * input_data['HvyAlcoholConsump']) + (1 - input_data['PhysActivity']) + (1 - input_data['Fruits']) + (1 - input_data['Veggies'])
-        
-        # 4. Psychosocial_Stress: Mental Health + (9 - Income) + (No Healthcare * 2)
-        input_data['Psychosocial_Stress'] = input_data['MentHlth'] + (9 - input_data['Income']) + ((1 - input_data['AnyHealthcare']) * 2)
+        # Legacy metabolic score for UI display
+        metabolic_score = input_data['HighBP'] + input_data['HighChol'] + input_data['BMI_obese']
 
-        # 5. Synergistic Habit Risk: Habits + Age/BMI multiplier
-        input_data['Synergistic_Habit_Risk'] = (input_data['Smoker'] + input_data['HvyAlcoholConsump']) * (input_data['BMI'] / 10 + input_data['Age'] / 5 + 1)
-
-        # Legacy Metabolic Score for UI display
-        metabolic_score = input_data['HighBP'] + input_data['HighChol'] + (1 if input_data['BMI'] > 30 else 0)
-
-        # Create DataFrame in the correct order
+        # ── 3. BUILD DATAFRAME IN MODEL COLUMN ORDER ────────────────────
         df = pd.DataFrame([input_data])
         df = df.reindex(columns=model_columns, fill_value=0)
         
-        # DATA FIX: Enforce float types and string columns to satisfy strict XGBoost checks
+        # Enforce float + string column names (cross-platform XGBoost fix)
         df = df.astype(float)
         df.columns = df.columns.astype(str)
 
-        # Make Prediction
-        # Updated Threshold for 92%+ Recall
-        threshold = 0.27
-        
-        # ULTIMATE FIX for 'feature names' error on Render/Linux
-        # The issue: XGBoost model pickled on Windows has strict feature validation
-        # Solution: Convert to numpy array and use booster's predict with feature validation disabled
-        
-        # Convert DataFrame to numpy array (bypasses pandas metadata issues)
+        # ── 4. PREDICTION ───────────────────────────────────────────────
         input_array = df.values
-        
-        # Get the underlying XGBoost Booster object
         booster = model.get_booster()
-        
-        # Create DMatrix from numpy array with explicit feature names
-        # Note: feature_names must match exactly what model was trained with
         dtest = xgboost.DMatrix(input_array, feature_names=list(df.columns))
-        
-        # Predict using the booster (returns probability for binary classification)
         probability = booster.predict(dtest)[0]
 
         prediction = 1 if probability >= threshold else 0
@@ -297,41 +302,48 @@ def predict():
             raw_top_names = [name for name, val in top_3]
             top_factor_values = [float(val) for name, val in top_3]
             
-            # Map technical names
+            # Map technical names to readable labels
             readable_map = {
-                'HighBP': 'High Blood Pressure', 'HighChol': 'High Cholesterol', 'Metabolic_Score': 'Metabolic Score',
-                'BMI': 'Body Mass Index', 'Age': 'Age Group',
-                'Metabolic_Index': 'Metabolic Index', 'Physical_Fragility': 'Physical Fragility Index',
-                'Lifestyle_Penalty': 'Lifestyle Hazard Score', 'Psychosocial_Stress': 'Stress Index',
-                'Synergistic_Habit_Risk': 'Habit Synergy Risk'
+                'HbA1c': 'HbA1c Level', 'HbA1c_sq': 'HbA1c (Squared)', 'HbA1c_diabetic': 'Diabetic HbA1c',
+                'HbA1c_BMI': 'HbA1c × BMI Interaction', 'HbA1c_Age': 'HbA1c × Age Interaction',
+                'HbA1c_HighBP': 'HbA1c × Blood Pressure', 'RiskScore': 'Clinical Risk Score',
+                'BMI': 'Body Mass Index', 'BMI_sq': 'BMI (Squared)', 'Age': 'Age Group',
+                'HighBP': 'High Blood Pressure', 'HighChol': 'High Cholesterol',
+                'Combo_BP_Chol': 'BP + Cholesterol Combo', 'Age_BMI': 'Age × BMI Interaction',
+                'HeartDiseaseorAttack': 'Heart Disease', 'Stroke': 'Stroke History',
+                'DiffWalk': 'Difficulty Walking', 'GenHlth': 'General Health'
             }
             top_factor_names = [readable_map.get(f, f) for f in raw_top_names]
 
-            # PREPARING HEALTH INDICES FOR UI (Transparency)
+            # HEALTH INDICES FOR TRANSPARENCY CARDS
             health_indices = {
-                'metabolic': {
-                    'name': 'Metabolic Index',
-                    'score': round(input_data['Metabolic_Index'], 1),
-                    'formula': '(High BP + High Chol) × BMI',
-                    'desc': 'Measures combined stress from blood metrics and weight.'
+                'hba1c': {
+                    'name': 'HbA1c Status',
+                    'score': round(hba1c, 1),
+                    'status_label': hba1c_status[0],
+                    'status_color': hba1c_status[1],
+                    'desc': 'Glycated haemoglobin — the gold-standard marker for diabetes diagnosis.'
                 },
-                'fragility': {
-                    'name': 'Physical Fragility',
-                    'score': round(input_data['Physical_Fragility'], 1),
-                    'formula': 'Age × (Physical Limits + History + 1)',
-                    'desc': 'Captures how age and physical history increase vulnerability.'
+                'clinical': {
+                    'name': 'Clinical Risk Score',
+                    'score': round(input_data['RiskScore'], 0),
+                    'status_label': 'High' if input_data['RiskScore'] >= 3 else 'Moderate' if input_data['RiskScore'] >= 1 else 'Low',
+                    'status_color': '#ef4444' if input_data['RiskScore'] >= 3 else '#f59e0b' if input_data['RiskScore'] >= 1 else '#10b981',
+                    'desc': 'Sum of serious comorbidities: BP, Cholesterol, Heart Disease, Stroke, Walking Difficulty.'
+                },
+                'metabolic': {
+                    'name': 'Metabolic State',
+                    'score': metabolic_score,
+                    'status_label': 'Obese' if input_data['BMI_obese'] else 'Normal Weight',
+                    'status_color': '#ef4444' if input_data['BMI_obese'] else '#10b981',
+                    'desc': 'Captures weight, blood pressure, and cholesterol together as metabolic syndrome markers.'
                 },
                 'lifestyle': {
-                    'name': 'Lifestyle Hazard',
-                    'score': round(input_data['Lifestyle_Penalty'], 1),
-                    'formula': '(2×Habits) + Inactivity + Low Nutrition',
-                    'desc': 'Measures the penalty for unhealthy behaviors.'
-                },
-                'stress': {
-                    'name': 'Psychosocial Stress',
-                    'score': round(input_data['Psychosocial_Stress'], 1),
-                    'formula': 'Mental Health + Economic Pressure + Healthcare Barrier',
-                    'desc': 'Holistic view of mental and environmental stress factors.'
+                    'name': 'Lifestyle Risk',
+                    'score': int(not input_data['PhysActivity']) + int(input_data['Smoker']) + int(input_data['HvyAlcoholConsump']),
+                    'status_label': 'Needs Improvement' if (not input_data['PhysActivity'] or input_data['Smoker']) else 'Healthy',
+                    'status_color': '#f59e0b' if (not input_data['PhysActivity'] or input_data['Smoker']) else '#10b981',
+                    'desc': 'Reflects smoking, heavy alcohol, and physical inactivity as modifiable risk factors.'
                 }
             }
 
@@ -376,10 +388,21 @@ def predict():
                      bmi_s = 1 if temp_data['BMI'] > 30 else 0
                      temp_data['Metabolic_Score'] = temp_data['HighBP'] + temp_data['HighChol'] + bmi_s
                 
+                # Re-compute HbA1c interaction features for counterfactual
+                t_h = temp_data.get('HbA1c', hba1c)
+                temp_data['HbA1c_sq'] = t_h ** 2
+                temp_data['HbA1c_BMI'] = t_h * temp_data.get('BMI', input_data['BMI'])
+                temp_data['HbA1c_Age'] = t_h * temp_data.get('Age', input_data['Age'])
+                temp_data['HbA1c_HighBP'] = t_h * temp_data.get('HighBP', input_data['HighBP'])
+                temp_data['BMI_obese'] = 1 if temp_data.get('BMI', input_data['BMI']) >= 30 else 0
+                temp_data['BMI_sq'] = temp_data.get('BMI', input_data['BMI']) ** 2
                 # Predict
                 t_df = pd.DataFrame([temp_data])
                 t_df = t_df.reindex(columns=model_columns, fill_value=0)
-                t_prob = model.predict_proba(t_df)[:, 1][0]
+                t_df = t_df.astype(float)
+                t_arr = t_df.values
+                t_dtest = xgboost.DMatrix(t_arr, feature_names=list(t_df.columns))
+                t_prob = booster.predict(t_dtest)[0]
                 
                 # Check for improvement
                 # If they have the risk factor, we show the advice if it drops risk > 0.5%

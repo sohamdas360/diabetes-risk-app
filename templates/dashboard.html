@@ -25,6 +25,14 @@
                 AI-powered risk analysis.</p>
 
             <form action="{{ url_for('predict') }}" method="POST">
+
+                <!-- ⭐ MOST IMPORTANT: HbA1c -->
+                <div class="form-group" style="border: 1px solid #6366f1; border-radius: 10px; padding: 1rem; margin-bottom: 1.2rem; background: rgba(99,102,241,0.08);">
+                    <label for="HbA1c" style="color: #a5b4fc; font-weight: bold;">🧬 HbA1c (Glycated Haemoglobin %)</label>
+                    <input type="number" step="0.1" name="HbA1c" required placeholder="e.g. 5.5" min="4.0" max="14.0" style="border: 1px solid #6366f1;">
+                    <p style="font-size:0.75rem; color:#94a3b8; margin-top:5px;">Normal &lt;5.7% | Pre-diabetic 5.7-6.4% | Diabetic ≥6.5%</p>
+                </div>
+
                 <!-- Numeric Inputs -->
                 <div class="form-group">
                     <label for="BMI">BMI (Body Mass Index)</label>
@@ -48,30 +56,30 @@
                         <option value="13">80+</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Sex</label>
+                    <select name="Sex">
+                        <option value="0">Female</option>
+                        <option value="1">Male</option>
+                    </select>
+                </div>
 
-                <!-- Binary Inputs -->
-                <div class="form-group">
-                    <label>High Blood Pressure?</label>
-                    <select name="HighBP">
+                <div class="form-group"><label>High Blood Pressure?</label><select name="HighBP">
                         <option value="0">No</option>
                         <option value="1">Yes</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>High Cholesterol?</label>
-                    <select name="HighChol">
+                    </select></div>
+                <div class="form-group"><label>High Cholesterol?</label><select name="HighChol">
                         <option value="0">No</option>
                         <option value="1">Yes</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Smoker?</label>
-                    <select name="Smoker">
+                    </select></div>
+                <div class="form-group"><label>Cholesterol Check in last 5 years?</label><select name="CholCheck">
+                        <option value="1">Yes</option>
+                        <option value="0">No</option>
+                    </select></div>
+                <div class="form-group"><label>Smoker?</label><select name="Smoker">
                         <option value="0">No</option>
                         <option value="1">Yes</option>
-                    </select>
-                </div>
-                <!-- Other Binary -->
+                    </select></div>
                 <div class="form-group"><label>Stroke History?</label><select name="Stroke">
                         <option value="0">No</option>
                         <option value="1">Yes</option>
@@ -80,11 +88,19 @@
                         <option value="0">No</option>
                         <option value="1">Yes</option>
                     </select></div>
-                <div class="form-group"><label>Physical Activity?</label><select name="PhysActivity">
+                <div class="form-group"><label>Physical Activity (last 30 days)?</label><select name="PhysActivity">
+                        <option value="1">Yes</option>
+                        <option value="0">No</option>
+                    </select></div>
+                <div class="form-group"><label>Heavy Alcohol?</label><select name="HvyAlcoholConsump">
                         <option value="0">No</option>
                         <option value="1">Yes</option>
                     </select></div>
-                <div class="form-group"><label>Heavy Alcohol?</label><select name="HvyAlcoholConsump">
+                <div class="form-group"><label>Have Healthcare Coverage?</label><select name="AnyHealthcare">
+                        <option value="1">Yes</option>
+                        <option value="0">No</option>
+                    </select></div>
+                <div class="form-group"><label>Couldn't see Doctor due to Cost?</label><select name="NoDocbcCost">
                         <option value="0">No</option>
                         <option value="1">Yes</option>
                     </select></div>
@@ -93,7 +109,6 @@
                         <option value="1">Yes</option>
                     </select></div>
 
-                <!-- Additional Required Features -->
                 <div class="form-group">
                     <label>Eat Fruits Daily?</label>
                     <select name="Fruits">
@@ -108,8 +123,29 @@
                         <option value="0">No</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>General Health (1=Excellent, 5=Poor)</label>
+                    <select name="GenHlth">
+                        <option value="1">1 — Excellent</option>
+                        <option value="2">2 — Very Good</option>
+                        <option value="3" selected>3 — Good</option>
+                        <option value="4">4 — Fair</option>
+                        <option value="5">5 — Poor</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Education Level</label>
+                    <select name="Education">
+                        <option value="6">University / College Graduate</option>
+                        <option value="5">Some College</option>
+                        <option value="4" selected>High School Graduate</option>
+                        <option value="3">Some High School</option>
+                        <option value="2">Elementary School</option>
+                        <option value="1">No Formal Education</option>
+                    </select>
+                </div>
 
-                <!-- Psychosocial Features -->
+                <!-- Psychosocial & Health Days -->
                 <div class="form-group">
                     <label>How has your Mental Health been lately?</label>
                     <select name="MentHlthScale">
@@ -121,23 +157,26 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Physical Health (Days unwell in last 30 days)</label>
+                    <select name="PhysHlthScale">
+                        <option value="5">None / 0 days</option>
+                        <option value="4">1-3 days</option>
+                        <option value="3">About a week</option>
+                        <option value="2">About 2 weeks</option>
+                        <option value="1">Most of the month</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Annual Income Level (INR)</label>
                     <select name="Income">
                         <option value="8">Above ₹50 Lakhs</option>
                         <option value="7">₹25L - ₹50 Lakhs</option>
                         <option value="6">₹15L - ₹25 Lakhs</option>
-                        <option value="5">₹10L - ₹15 Lakhs</option>
+                        <option value="5" selected>₹10L - ₹15 Lakhs</option>
                         <option value="4">₹7.5L - ₹10 Lakhs</option>
                         <option value="3">₹5L - ₹7.5 Lakhs</option>
                         <option value="2">₹2.5L - ₹5 Lakhs</option>
                         <option value="1">Below ₹2.5 Lakhs</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Have Healthcare Coverage?</label>
-                    <select name="AnyHealthcare">
-                        <option value="1">Yes</option>
-                        <option value="0">No</option>
                     </select>
                 </div>
 
