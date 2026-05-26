@@ -7,9 +7,7 @@
     <title>Risk Assessment Result</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
 </head>
 
@@ -24,6 +22,21 @@
 
         <div class="glass-card animate__animated animate__fadeIn">
             <h1>Assessment Results</h1>
+
+            <!-- Stage Badge -->
+            {% if stage == 1 %}
+            <div style="text-align:center; margin-bottom:1.5rem;">
+                <span style="background: rgba(245,158,11,0.15); color: #f59e0b; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; border: 1px solid rgba(245,158,11,0.3);">
+                    📋 Stage 1: Lifestyle Screening (No Lab Data)
+                </span>
+            </div>
+            {% else %}
+            <div style="text-align:center; margin-bottom:1.5rem;">
+                <span style="background: rgba(99,102,241,0.15); color: #a5b4fc; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; border: 1px solid rgba(99,102,241,0.3);">
+                    🧬 Stage 2: Clinical-Grade Prediction (With HbA1c Lab)
+                </span>
+            </div>
+            {% endif %}
 
             <div class="result-grid">
                 <!-- Probability Gauge -->
@@ -41,35 +54,61 @@
                     </div>
                 </div>
 
-                <!-- Verdict & Risk Drivers -->
+                <!-- Verdict & Health Indices -->
                 <div class="risk-drivers-container">
                     <div style="text-align: center; margin-bottom: 2rem;">
                         <h3>Verdict</h3>
                         <span class="verdict-badge {{ 'badge-high' if high_risk else 'badge-low' }}">
                             {{ 'HIGH RISK' if high_risk else 'LOW RISK' }}
                         </span>
-                        <div style="color: #94a3b8; font-size: 0.9rem;">
-                            Threshold: >27%
-                        </div>
                     </div>
 
-                    <!-- Advanced Health Indices (Transparency Overhaul) -->
-                    <div class="indices-container" style="margin-top: 2rem;">
-                        <h3 style="text-align: center; color: #a5b4fc; margin-bottom: 1.5rem;">Advanced Health Profiling
-                        </h3>
-
-                        {% for key, index in health_indices.items() %}
-                        <div class="glass-card index-card"
-                            style="margin-bottom: 1rem; padding: 1.2rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
-                            <div
-                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                <span style="font-weight: bold; color: #fff; font-size: 1.1rem;">{{ index.name }}</span>
-                                <span style="font-size: 1.4rem; font-weight: 800; color: #6366f1;">{{ index.score
-                                    }}</span>
+                    <!-- Stage 2: Comparison Card -->
+                    {% if stage == 2 and stage1_prob_percent is not none %}
+                    <div style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.3); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem;">
+                        <p style="color: #a5b4fc; font-weight: bold; margin: 0 0 0.8rem 0; font-size: 0.9rem;">📊 Screening vs Lab Comparison</p>
+                        <div style="display: flex; justify-content: space-around; text-align: center;">
+                            <div>
+                                <p style="color: #94a3b8; font-size: 0.75rem; margin: 0;">Lifestyle Screening</p>
+                                <p style="color: #f59e0b; font-size: 1.3rem; font-weight: 800; margin: 4px 0;">{{ "%.2f"|format(stage1_prob_percent) }}%</p>
                             </div>
-
-                            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">{{ index.desc }}</p>
+                            <div style="color: #4b5563; font-size: 1.5rem; align-self: center;">→</div>
+                            <div>
+                                <p style="color: #94a3b8; font-size: 0.75rem; margin: 0;">With Lab Report</p>
+                                <p style="color: {% if high_risk %}#ef4444{% else %}#10b981{% endif %}; font-size: 1.3rem; font-weight: 800; margin: 4px 0;">{{ "%.2f"|format(prob_percent) }}%</p>
+                            </div>
                         </div>
+                        <p style="font-size: 0.7rem; color: #64748b; text-align: center; margin: 0.5rem 0 0 0;">
+                            Lab data provides significantly higher diagnostic confidence.
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <!-- HbA1c Status (Stage 2 only) -->
+                    {% if stage == 2 and hba1c_val is not none %}
+                    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: bold; color: #fff;">🧬 HbA1c Level</span>
+                            <span style="font-size: 1.4rem; font-weight: 800; color: {{ hba1c_status[1] }};">{{ hba1c_val }}%</span>
+                        </div>
+                        <p style="font-size: 0.8rem; color: {{ hba1c_status[1] }}; margin: 5px 0 0 0;">{{ hba1c_status[0] }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Health Index Cards -->
+                    <div class="indices-container" style="margin-top: 1rem;">
+                        <h3 style="text-align: center; color: #a5b4fc; margin-bottom: 1rem;">Health Profiling</h3>
+                        {% for key, index in health_indices.items() %}
+                        {% if key != 'hba1c' %}
+                        <div class="glass-card index-card"
+                            style="margin-bottom: 0.8rem; padding: 1rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                                <span style="font-weight: bold; color: #fff; font-size: 1rem;">{{ index.name }}</span>
+                                <span style="font-size: 0.85rem; font-weight: 600; color: {{ index.status_color }};">{{ index.status_label }}</span>
+                            </div>
+                            <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">{{ index.desc }}</p>
+                        </div>
+                        {% endif %}
                         {% endfor %}
                     </div>
                 </div>
@@ -90,19 +129,15 @@
                 </div>
             </div>
 
-            <!-- Simplified Factor Breakdown -->
+            <!-- Impact Analysis -->
             <div class="glass-card" style="margin-top: 2rem; background: rgba(0,0,0,0.3);">
                 <h3>Impact Analysis</h3>
                 <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 1.5rem;">
-                    We compare your metrics against a national average baseline. Red factors increase your individual
-                    risk.
+                    We compare your metrics against a national average baseline. Red factors increase your individual risk.
                 </p>
-
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
                     <div>
-                        <h4
-                            style="color: #ef4444; border-bottom: 1px solid rgba(239, 68, 68, 0.3); padding-bottom: 0.5rem;">
-                            Increased Risk</h4>
+                        <h4 style="color: #ef4444; border-bottom: 1px solid rgba(239, 68, 68, 0.3); padding-bottom: 0.5rem;">Increased Risk</h4>
                         <ul style="list-style: none; padding: 0; margin-top: 0.8rem;">
                             {% for factor in top_factors %}
                             <li style="margin-bottom: 0.6rem; color: #fecaca; font-size: 0.9rem;">
@@ -112,9 +147,7 @@
                         </ul>
                     </div>
                     <div>
-                        <h4
-                            style="color: #4ade80; border-bottom: 1px solid rgba(74, 222, 128, 0.3); padding-bottom: 0.5rem;">
-                            Protective Factors</h4>
+                        <h4 style="color: #4ade80; border-bottom: 1px solid rgba(74, 222, 128, 0.3); padding-bottom: 0.5rem;">Protective Factors</h4>
                         <p style="font-size: 0.75rem; color: #94a3b8; font-style: italic;">
                             Factors like Healthy Diet and Physical Activity help pull your risk score down.
                         </p>
@@ -122,13 +155,28 @@
                 </div>
             </div>
 
+            <!-- Stage 1: ALWAYS recommend lab test -->
+            {% if stage == 1 %}
+            <div style="margin-top: 2rem; padding: 1.2rem; border: 1px solid rgba(99,102,241,0.4); border-radius: 10px; background: rgba(99,102,241,0.08); text-align: center;">
+                <p style="color: #a5b4fc; font-weight: bold; font-size: 1rem; margin: 0 0 0.5rem 0;">
+                    🧬 Want a More Accurate Prediction?
+                </p>
+                <p style="color: #94a3b8; font-size: 0.85rem; margin: 0 0 1rem 0;">
+                    This screening is based on self-reported lifestyle data only. For a <strong style="color:#a5b4fc;">clinical-grade prediction</strong>,
+                    get an HbA1c blood test from any lab and enter the value in your next assessment.
+                </p>
+                <p style="color: #f59e0b; font-size: 0.8rem; margin: 0;">
+                    ⚠️ <strong>Regardless of your result, we recommend getting a lab test.</strong> Self-reported data has limitations —
+                    underlying conditions may not be visible without blood work.
+                </p>
+            </div>
+            {% endif %}
+
             <!-- Medical Disclaimer -->
-            <div
-                style="margin-top: 2rem; padding: 1rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: rgba(255,0,85,0.1); text-align: center;">
-                <p style="color: #ff9ca3; font-size: 0.9rem; margin: 0;">
+            <div style="margin-top: 1.5rem; padding: 1rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: rgba(255,0,85,0.1); text-align: center;">
+                <p style="color: #ff9ca3; font-size: 0.85rem; margin: 0;">
                     <strong>⚠️ Medical Disclaimer:</strong> This AI tool is for informational purposes only and does not
-                    constitute a medical diagnosis.
-                    Please consult a certified healthcare professional for medical advice and testing.
+                    constitute a medical diagnosis. Please consult a certified healthcare professional.
                 </p>
             </div>
 
@@ -142,11 +190,9 @@
     </div>
 
     <script>
-        // Data passed from Flask
         const riskProb = {{ prob_percent }};
         const safeProb = 100 - riskProb;
 
-        // --- 1. Gauge Chart ---
         const ctxGauge = document.getElementById('riskGauge').getContext('2d');
         const riskGauge = new Chart(ctxGauge, {
             type: 'doughnut',

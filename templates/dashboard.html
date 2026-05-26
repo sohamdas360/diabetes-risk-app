@@ -26,13 +26,6 @@
 
             <form action="{{ url_for('predict') }}" method="POST">
 
-                <!-- ⭐ MOST IMPORTANT: HbA1c -->
-                <div class="form-group" style="border: 1px solid #6366f1; border-radius: 10px; padding: 1rem; margin-bottom: 1.2rem; background: rgba(99,102,241,0.08);">
-                    <label for="HbA1c" style="color: #a5b4fc; font-weight: bold;">🧬 HbA1c (Glycated Haemoglobin %)</label>
-                    <input type="number" step="0.1" name="HbA1c" required placeholder="e.g. 5.5" min="4.0" max="14.0" style="border: 1px solid #6366f1;">
-                    <p style="font-size:0.75rem; color:#94a3b8; margin-top:5px;">Normal &lt;5.7% | Pre-diabetic 5.7-6.4% | Diabetic ≥6.5%</p>
-                </div>
-
                 <!-- Numeric Inputs -->
                 <div class="form-group">
                     <label for="BMI">BMI (Body Mass Index)</label>
@@ -56,13 +49,7 @@
                         <option value="13">80+</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Sex</label>
-                    <select name="Sex">
-                        <option value="0">Female</option>
-                        <option value="1">Male</option>
-                    </select>
-                </div>
+
 
                 <div class="form-group"><label>High Blood Pressure?</label><select name="HighBP">
                         <option value="0">No</option>
@@ -72,10 +59,7 @@
                         <option value="0">No</option>
                         <option value="1">Yes</option>
                     </select></div>
-                <div class="form-group"><label>Cholesterol Check in last 5 years?</label><select name="CholCheck">
-                        <option value="1">Yes</option>
-                        <option value="0">No</option>
-                    </select></div>
+
                 <div class="form-group"><label>Smoker?</label><select name="Smoker">
                         <option value="0">No</option>
                         <option value="1">Yes</option>
@@ -99,10 +83,6 @@
                 <div class="form-group"><label>Have Healthcare Coverage?</label><select name="AnyHealthcare">
                         <option value="1">Yes</option>
                         <option value="0">No</option>
-                    </select></div>
-                <div class="form-group"><label>Couldn't see Doctor due to Cost?</label><select name="NoDocbcCost">
-                        <option value="0">No</option>
-                        <option value="1">Yes</option>
                     </select></div>
                 <div class="form-group"><label>Difficulty in Walking?</label><select name="DiffWalk">
                         <option value="0">No</option>
@@ -178,6 +158,19 @@
                         <option value="2">₹2.5L - ₹5 Lakhs</option>
                         <option value="1">Below ₹2.5 Lakhs</option>
                     </select>
+                </div>
+
+                <!-- ═══ OPTIONAL: Lab Report Section ═══ -->
+                <div style="border: 1px dashed #6366f1; border-radius: 10px; padding: 1rem; margin: 1.5rem 0; background: rgba(99,102,241,0.05);">
+                    <p style="color: #a5b4fc; font-weight: bold; margin: 0 0 0.5rem 0;">🧬 Have a Lab Report? (Optional)</p>
+                    <p style="font-size: 0.75rem; color: #94a3b8; margin: 0 0 0.8rem 0;">
+                        Enter your HbA1c value for a <strong>clinical-grade prediction</strong>. Skip this for a lifestyle-based screening.
+                    </p>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>HbA1c (Glycated Haemoglobin %)</label>
+                        <input type="number" step="0.1" name="HbA1c" placeholder="Leave blank for screening only" min="4.0" max="14.0">
+                        <p style="font-size:0.7rem; color:#64748b; margin-top:4px;">Normal &lt;5.7% | Pre-diabetic 5.7-6.4% | Diabetic ≥6.5%</p>
+                    </div>
                 </div>
 
                 <button type="submit" class="submit-btn" style="width:100%;">Assess Risk Now</button>
