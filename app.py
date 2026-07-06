@@ -20,6 +20,12 @@ matplotlib.use('Agg')
 app = flask.Flask(__name__)
 app.secret_key = 'super_secret_key_change_this_for_production'
 
+# --- SESSION SECURITY / COOKIE HARDENING ---
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True if os.environ.get('RENDER') else False
+
+
 # --- DATABASE SETUP ---
 DB_NAME = "users.db"
 
@@ -122,6 +128,21 @@ def register():
         username = flask.request.form['username']
         password = flask.request.form['password']
         
+        # Server-side validation
+        if len(username.strip()) < 3:
+            flask.flash("Username must be at least 3 characters long.")
+            return flask.redirect(flask.url_for('register'))
+            
+        if len(password) < 8:
+            flask.flash("Password must be at least 8 characters long.")
+            return flask.redirect(flask.url_for('register'))
+            
+        has_letter = any(c.isalpha() for c in password)
+        has_digit = any(c.isdigit() for c in password)
+        if not (has_letter and has_digit):
+            flask.flash("Password must contain both letters and numbers.")
+            return flask.redirect(flask.url_for('register'))
+
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         
